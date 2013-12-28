@@ -60,40 +60,45 @@ class Surface:
 	def get_lines(self):
 		return [Line(self.points[i], self.points[i + 1]) for i in range(-1, len(self.points) - 1)]
 
+class Wall:
+	def __init__(self, points, surfaces):
+		self.points = points
+		self.surfaces = surfaces
+
+CUSTOM = Wall((
+				Point(  0,  80,   0), # 0
+				Point(  0,   0,   0),
+				Point( 30,  80,  46),
+				Point( 30,  20,   0),
+				Point( 60,  80,   0),
+				Point( 70,  80,   0), # 5
+				Point(116,  80,  46),
+				Point(116,  20,   0),
+				Point(200,  80,  46),
+				Point(200,  20,   0),
+				Point(200,   0,   0), # 10
+				Point(246,  20,  46),
+				Point(246,   0,  46),
+				Point(200,  80, 100),
+				Point(246,  20, 100),
+				Point(246,   0, 100), # 15
+		), (
+				(0, 1, 10, 9, 7, 5, 4, 3),
+				(0, 3, 2),
+				(3, 4, 2),
+				(5, 7, 6),
+				(6, 7, 9, 8),
+				(8, 9, 11),
+				(9, 10, 12, 11),
+				(8, 11, 14, 13),
+				(11, 12, 15, 14),
+		))
+
+
 if __name__ == "__main__":
-	points = [
-			Point(  0,  80,   0), # 0
-			Point(  0,   0,   0),
-			Point( 30,  80,  46),
-			Point( 30,  20,   0),
-			Point( 60,  80,   0),
-			Point( 70,  80,   0), # 5
-			Point(116,  80,  46),
-			Point(116,  20,   0),
-			Point(200,  80,  46),
-			Point(200,  20,   0),
-			Point(200,   0,   0), # 10
-			Point(246,  20,  46),
-			Point(246,   0,  46),
-			Point(200,  80, 100),
-			Point(246,  20, 100),
-			Point(246,   0, 100), # 15
-	]
-	surfaces_index = (
-			(0, 1, 10, 9, 7, 5, 4, 3),
-			(0, 3, 2),
-			(3, 4, 2),
-			(5, 7, 6),
-			(6, 7, 9, 8),
-			(8, 9, 11),
-			(9, 10, 12, 11),
-			(8, 11, 14, 13),
-			(11, 12, 15, 14),
-	)
-	surfaces = [Surface(points[i] for i in surface) for surface in surfaces_index]
+	surfaces = [Surface(CUSTOM.points[i] for i in surface) for surface in CUSTOM.surfaces]
 	lines = set()
 	for surface in surfaces:
 		lines = lines.union(surface.get_lines())
-		print(len(lines))
 	for line in lines:
 		print(line)
