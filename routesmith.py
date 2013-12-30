@@ -15,16 +15,16 @@ class Point:
 		return hash((self.x, self.y, self.z))
 	def __str__(self):
 		return "({}, {}, {})".format(self.x, self.y, self.z)
-	def clone(self):
-		return Point(self.x, self.y, self.z)
-	def add(self, p):
+	def __add__(self, p):
 		return Point(self.x + p.x, self.y + p.y, self.z + p.z)
-	def subtract(self, p):
+	def __sub__(self, p):
 		return Point(self.x - p.x, self.y - p.y, self.z - p.z)
 	def dot(self, p):
 		return self.x * p.x + self.y * p.y + self.z * p.z
 	def cross(self, p):
 		return Point(self.y * p.z - self.z * p.y, self.z * p.x - self.x * p.z, self.x * p.y - self.y * p.x)
+	def clone(self):
+		return Point(self.x, self.y, self.z)
 	def length(self):
 		return math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
 	def normalize(self):
@@ -64,6 +64,11 @@ class Wall:
 	def __init__(self, points, surfaces):
 		self.points = points
 		self.surfaces = surfaces
+		center = Point(
+				(max(p.x for p in self.points) + min(p.x for p in self.points)) / 2,
+				(max(p.y for p in self.points) + min(p.y for p in self.points)) / 2,
+				(max(p.z for p in self.points) + min(p.z for p in self.points)) / 2)
+		self.points = tuple(p - center for p in self.points)
 
 CUSTOM = Wall((
 				Point(  0,  80,   0), # 0
@@ -93,7 +98,6 @@ CUSTOM = Wall((
 				(8, 11, 14, 13),
 				(11, 12, 15, 14),
 		))
-
 
 if __name__ == "__main__":
 	surfaces = [Surface(CUSTOM.points[i] for i in surface) for surface in CUSTOM.surfaces]
