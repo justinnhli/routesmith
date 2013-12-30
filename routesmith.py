@@ -2,6 +2,10 @@
 
 import math # FIXME should use numpy
 
+from tkinter import *
+
+# MODELING CLASSES
+
 class Point:
 	def __init__(self, x, y, z):
 		self.x = x
@@ -23,6 +27,19 @@ class Point:
 		return self.x * p.x + self.y * p.y + self.z * p.z
 	def cross(self, p):
 		return Point(self.y * p.z - self.z * p.y, self.z * p.x - self.x * p.z, self.x * p.y - self.y * p.x)
+	def rotate(self, theta, phi):
+		sin_theta = math.sin(theta)
+		cos_theta = math.cos(theta)
+		sin_phi = math.sin(phi)
+		cos_phi = math.cos(phi)
+		x = self.x * cos_theta + self.z * sin_theta
+		y = self.x * sin_theta * sin_phi
+		y += self.y * cos_phi
+		y -= self.z * cos_theta * sin_phi
+		z = -self.x * sin_theta * cos_phi
+		z += self.y * sin_theta
+		z += self.z * cos_theta * cos_phi
+		return Point(x, y, z)
 	def clone(self):
 		return Point(self.x, self.y, self.z)
 	def length(self):
@@ -47,7 +64,6 @@ class Line:
 		return hash((hash(self.p1), hash(self.p2)))
 	def __str__(self):
 		return "({}, {})".format(self.p1, self.p2)
-		#return "wall.push(new Line(new Point{}, new Point{}));".format(self.p1, self.p2)
 	def clone(self):
 		return Line(self.p1, self.p2)
 
@@ -59,6 +75,123 @@ class Surface:
 			self.points = list(points)
 	def get_lines(self):
 		return [Line(self.points[i], self.points[i + 1]) for i in range(-1, len(self.points) - 1)]
+
+# GRAPHICS CLASSES
+
+class Viewport:
+	def __init__(self, width, height):
+		self.width = width
+		self.height = height
+		self.reset()
+	def reset(self):
+		self.theta = 0
+		self.phi = 0
+		self.scale = 1
+		self.x_offset = self.width / 2
+		self.y_offset = self.height / 2
+	def project(self, point):
+		projected = point.rotate(self.theta, self.phi)
+		return (projected.x * self.scale + self.x_offset, -projected.y * self.scale + self.y_offset)
+	def move_camera(self, theta, phi):
+		self.theta += theta
+		if self.theta > 2 * math.pi:
+			self.theta -= 2 * math.pi
+		elif self.theta < 0:
+			self.theta += 2 * math.pi
+		self.phi += phi
+		if self.phi > math.pi / 2:
+			self.theta = -self.theta
+			self.phi = (math.pi / 2) - self.phi;
+		elif self.theta < 0:
+			self.theta = -self.theta
+			self.phi -= math.pi / 2;
+
+class Viewer:
+	def __init__(self, width, height):
+		self.width = width
+		self.height = height
+		self.canvas = Canvas(Tk(), width=self.width, height=self.height)
+		self.canvas.pack()
+		self.viewport = Viewport(self.width, self.height)
+		self.viewport.theta = (math.pi / 4)
+		self.viewport.phi = -(math.pi / 16)
+		self.canvas.bind("<Up>", self._callback_commandline_up)
+		self.canvas.bind("<Down>", self._callback_commandline_down)
+		self.canvas.bind("<Left>", self._callback_commandline_left)
+		self.canvas.bind("<Right>", self._callback_commandline_right)
+		self.canvas.bind("=", self._callback_commandline_equal)
+		self.canvas.bind("-", self._callback_commandline_minus)
+		self.canvas.bind("<Shift-Up>", self._callback_commandline_shift_up)
+		self.canvas.bind("<Shift-Down>", self._callback_commandline_shift_down)
+		self.canvas.bind("<Shift-Left>", self._callback_commandline_shift_left)
+		self.canvas.bind("<Shift-Right>", self._callback_commandline_shift_right)
+		self.canvas.bind("<Shift-Return>", self._callback_commandline_shift_return)
+		self.surfaces = []
+		self.canvas.focus_set()
+	def add_surface(self, surface):
+		self.surfaces.append(surface)
+	def clear(self):
+		self.canvas.create_rectangle(0, 0, self.width + 10, self.height + 10, fill="white")
+	def draw(self):
+		print((self.viewport.theta, self.viewport.phi))
+		lines = set()
+		for surface in self.surfaces:
+			lines = lines.union(surface.get_lines())
+		for line in lines:
+			x1, y1 = self.viewport.project(line.p1)
+			x2, y2 = self.viewport.project(line.p2)
+			self.canvas.create_line(x1, y1, x2, y2)
+	def mainloop(self):
+		self.draw()
+		mainloop()
+	def _callback_commandline_up(self, *args):
+		self.viewport.move_camera(0, -math.pi / 16)
+		self.clear()
+		self.draw()
+	def _callback_commandline_down(self, *args):
+		self.viewport.move_camera(0, math.pi / 16)
+		self.clear()
+		self.draw()
+	def _callback_commandline_left(self, *args):
+		self.viewport.move_camera(-math.pi / 16, 0)
+		self.clear()
+		self.draw()
+	def _callback_commandline_right(self, *args):
+		self.viewport.move_camera(math.pi / 16, 0)
+		self.clear()
+		self.draw()
+	def _callback_commandline_equal(self, *args):
+		self.viewport.scale *= 1.2
+		self.clear()
+		self.draw()
+	def _callback_commandline_minus(self, *args):
+		self.viewport.scale /= 1.2
+		self.clear()
+		self.draw()
+	def _callback_commandline_shift_up(self, *args):
+		self.viewport.y_offset -= 10
+		self.clear()
+		self.draw()
+	def _callback_commandline_shift_down(self, *args):
+		self.viewport.y_offset += 10
+		self.clear()
+		self.draw()
+	def _callback_commandline_shift_left(self, *args):
+		self.viewport.x_offset -= 10
+		self.clear()
+		self.draw()
+	def _callback_commandline_shift_right(self, *args):
+		self.viewport.x_offset += 10
+		self.clear()
+		self.draw()
+	def _callback_commandline_shift_return(self, *args):
+		self.viewport.reset()
+		self.viewport.theta = (math.pi / 4)
+		self.viewport.phi = -(math.pi / 16)
+		self.clear()
+		self.draw()
+
+# CLIMBING CLASSES
 
 class Wall:
 	def __init__(self, points, surfaces):
@@ -100,9 +233,7 @@ CUSTOM = Wall((
 		))
 
 if __name__ == "__main__":
-	surfaces = [Surface(CUSTOM.points[i] for i in surface) for surface in CUSTOM.surfaces]
-	lines = set()
-	for surface in surfaces:
-		lines = lines.union(surface.get_lines())
-	for line in lines:
-		print(line)
+	viewer = Viewer(800, 600)
+	for surface in CUSTOM.surfaces:
+		viewer.add_surface(Surface(CUSTOM.points[i] for i in surface))
+	viewer.mainloop()
