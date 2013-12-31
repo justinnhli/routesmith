@@ -133,7 +133,6 @@ class Viewer:
 	def clear(self):
 		self.canvas.create_rectangle(0, 0, self.width + 10, self.height + 10, fill="white")
 	def draw(self):
-		print((self.viewport.theta, self.viewport.phi))
 		lines = set()
 		for surface in self.surfaces:
 			lines = lines.union(surface.get_lines())
@@ -202,6 +201,23 @@ class Wall:
 				(max(p.y for p in self.points) + min(p.y for p in self.points)) / 2,
 				(max(p.z for p in self.points) + min(p.z for p in self.points)) / 2)
 		self.points = tuple(p - center for p in self.points)
+
+class Hold:
+	def __init__(self, wall, surface, position):
+		self.wall = wall
+		self.surface = surface
+		self.position = position
+		pass
+
+class Problem:
+	def __init__(self):
+		self.holds = []
+		self.start_holds = []
+		self.finish_holds = []
+	def set_start_hold(self, index):
+		pass
+	def set_finish_hold(self, index):
+		pass
 
 CUSTOM = Wall((
 				Point(  0,  80,   0), # 0
