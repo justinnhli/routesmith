@@ -143,25 +143,25 @@ class IsometricViewer:
 		self.move_camera(math.pi / 16, 0)
 		self.update()
 	def _callback_commandline_equal(self, *args):
-		self.viewport.scale *= 1.2
+		self.scale *= 1.2
 		self.update()
 	def _callback_commandline_minus(self, *args):
-		self.viewport.scale /= 1.2
+		self.scale /= 1.2
 		self.update()
 	def _callback_commandline_shift_up(self, *args):
-		self.viewport.y_offset -= 10
+		self.y_offset -= 10
 		self.update()
 	def _callback_commandline_shift_down(self, *args):
-		self.viewport.y_offset += 10
+		self.y_offset += 10
 		self.update()
 	def _callback_commandline_shift_left(self, *args):
-		self.viewport.x_offset -= 10
+		self.x_offset -= 10
 		self.update()
 	def _callback_commandline_shift_right(self, *args):
-		self.viewport.x_offset += 10
+		self.x_offset += 10
 		self.update()
 	def _callback_commandline_shift_return(self, *args):
-		self.viewport.reset()
+		self.reset()
 		self.update()
 
 # CLIMBING CLASSES
