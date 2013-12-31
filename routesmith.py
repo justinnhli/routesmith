@@ -23,6 +23,8 @@ class Point:
 		return Point(self.x + p.x, self.y + p.y, self.z + p.z)
 	def __sub__(self, p):
 		return Point(self.x - p.x, self.y - p.y, self.z - p.z)
+	def __neg__(self):
+		return Point(-self.x, -self.y, -self.z)
 	def dot(self, p):
 		return self.x * p.x + self.y * p.y + self.z * p.z
 	def cross(self, p):
