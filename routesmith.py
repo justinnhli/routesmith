@@ -54,8 +54,7 @@ class Surface:
 			self.points = []
 		else:
 			self.points = list(points)
-	def get_lines(self):
-		return [Line(self.points[i], self.points[i + 1]) for i in range(-1, len(self.points) - 1)]
+		# TODO make sure points are co-planar and surface is simple (no line intersections)
 
 # GRAPHICS CLASSES
 
@@ -113,9 +112,9 @@ class IsometricViewer:
 	def draw_wiremesh(self):
 		lines = set()
 		for surface in self.surfaces:
-			for i in range(-1, len(surface.points) - 1):
-				p1 = surface.points[i]
-				p2 = surface.points[i+1]
+			for i in range(len(surface.points)):
+				p1 = surface.points[i-1]
+				p2 = surface.points[i]
 				if hash(p1) < hash(p2):
 					lines.add((self.project(p1), self.project(p2)))
 				else:
