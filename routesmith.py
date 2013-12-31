@@ -65,7 +65,6 @@ class IsometricViewer:
 		self.wiremesh = True
 		self.reset_viewport()
 		self.init_gui()
-		self.bind_keys()
 		self.surfaces = []
 	def reset_viewport(self):
 		self.theta = (math.pi / 4)
@@ -77,7 +76,6 @@ class IsometricViewer:
 		self.canvas = Canvas(Tk(), width=self.width, height=self.height)
 		self.canvas.pack()
 		self.canvas.focus_set()
-	def bind_keys(self):
 		self.canvas.bind("<Up>", self._callback_commandline_up)
 		self.canvas.bind("<Down>", self._callback_commandline_down)
 		self.canvas.bind("<Left>", self._callback_commandline_left)
