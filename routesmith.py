@@ -78,17 +78,38 @@ class Surface:
 
 # GRAPHICS CLASSES
 
-class Viewport:
+class IsometricViewer:
 	def __init__(self, width, height):
 		self.width = width
 		self.height = height
-		self.reset()
-	def reset(self):
-		self.theta = 0
-		self.phi = 0
+		self.reset_viewport()
+		self.init_gui()
+		self.bind_keys()
+		self.surfaces = []
+	def reset_viewport(self):
+		self.theta = (math.pi / 4)
+		self.phi = -(math.pi / 16)
 		self.scale = 1
 		self.x_offset = self.width / 2
 		self.y_offset = self.height / 2
+	def init_gui(self):
+		self.canvas = Canvas(Tk(), width=self.width, height=self.height)
+		self.canvas.pack()
+		self.canvas.focus_set()
+	def bind_keys(self):
+		self.canvas.bind("<Up>", self._callback_commandline_up)
+		self.canvas.bind("<Down>", self._callback_commandline_down)
+		self.canvas.bind("<Left>", self._callback_commandline_left)
+		self.canvas.bind("<Right>", self._callback_commandline_right)
+		self.canvas.bind("=", self._callback_commandline_equal)
+		self.canvas.bind("-", self._callback_commandline_minus)
+		self.canvas.bind("<Shift-Up>", self._callback_commandline_shift_up)
+		self.canvas.bind("<Shift-Down>", self._callback_commandline_shift_down)
+		self.canvas.bind("<Shift-Left>", self._callback_commandline_shift_left)
+		self.canvas.bind("<Shift-Right>", self._callback_commandline_shift_right)
+		self.canvas.bind("<Shift-Return>", self._callback_commandline_shift_return)
+	def add_surface(self, surface):
+		self.surfaces.append(surface)
 	def project(self, point):
 		projected = point.rotate(self.theta, self.phi)
 		return (projected.x * self.scale + self.x_offset, -projected.y * self.scale + self.y_offset)
@@ -105,31 +126,6 @@ class Viewport:
 		elif self.theta < 0:
 			self.theta = -self.theta
 			self.phi -= math.pi / 2;
-
-class Viewer:
-	def __init__(self, width, height):
-		self.width = width
-		self.height = height
-		self.canvas = Canvas(Tk(), width=self.width, height=self.height)
-		self.canvas.pack()
-		self.viewport = Viewport(self.width, self.height)
-		self.viewport.theta = (math.pi / 4)
-		self.viewport.phi = -(math.pi / 16)
-		self.canvas.bind("<Up>", self._callback_commandline_up)
-		self.canvas.bind("<Down>", self._callback_commandline_down)
-		self.canvas.bind("<Left>", self._callback_commandline_left)
-		self.canvas.bind("<Right>", self._callback_commandline_right)
-		self.canvas.bind("=", self._callback_commandline_equal)
-		self.canvas.bind("-", self._callback_commandline_minus)
-		self.canvas.bind("<Shift-Up>", self._callback_commandline_shift_up)
-		self.canvas.bind("<Shift-Down>", self._callback_commandline_shift_down)
-		self.canvas.bind("<Shift-Left>", self._callback_commandline_shift_left)
-		self.canvas.bind("<Shift-Right>", self._callback_commandline_shift_right)
-		self.canvas.bind("<Shift-Return>", self._callback_commandline_shift_return)
-		self.surfaces = []
-		self.canvas.focus_set()
-	def add_surface(self, surface):
-		self.surfaces.append(surface)
 	def clear(self):
 		self.canvas.create_rectangle(0, 0, self.width + 10, self.height + 10, fill="white")
 	def draw(self):
@@ -137,58 +133,50 @@ class Viewer:
 		for surface in self.surfaces:
 			lines = lines.union(surface.get_lines())
 		for line in lines:
-			x1, y1 = self.viewport.project(line.p1)
-			x2, y2 = self.viewport.project(line.p2)
+			x1, y1 = self.project(line.p1)
+			x2, y2 = self.project(line.p2)
 			self.canvas.create_line(x1, y1, x2, y2)
-	def mainloop(self):
+	def update(self):
+		self.clear()
 		self.draw()
+	def mainloop(self):
+		self.update()
 		mainloop()
 	def _callback_commandline_up(self, *args):
-		self.viewport.move_camera(0, -math.pi / 16)
-		self.clear()
-		self.draw()
+		self.move_camera(0, -math.pi / 16)
+		self.update()
 	def _callback_commandline_down(self, *args):
-		self.viewport.move_camera(0, math.pi / 16)
-		self.clear()
-		self.draw()
+		self.move_camera(0, math.pi / 16)
+		self.update()
 	def _callback_commandline_left(self, *args):
-		self.viewport.move_camera(-math.pi / 16, 0)
-		self.clear()
-		self.draw()
+		self.move_camera(-math.pi / 16, 0)
+		self.update()
 	def _callback_commandline_right(self, *args):
-		self.viewport.move_camera(math.pi / 16, 0)
-		self.clear()
-		self.draw()
+		self.move_camera(math.pi / 16, 0)
+		self.update()
 	def _callback_commandline_equal(self, *args):
 		self.viewport.scale *= 1.2
-		self.clear()
-		self.draw()
+		self.update()
 	def _callback_commandline_minus(self, *args):
 		self.viewport.scale /= 1.2
-		self.clear()
-		self.draw()
+		self.update()
 	def _callback_commandline_shift_up(self, *args):
 		self.viewport.y_offset -= 10
-		self.clear()
-		self.draw()
+		self.update()
 	def _callback_commandline_shift_down(self, *args):
 		self.viewport.y_offset += 10
-		self.clear()
-		self.draw()
+		self.update()
 	def _callback_commandline_shift_left(self, *args):
 		self.viewport.x_offset -= 10
-		self.clear()
-		self.draw()
+		self.update()
 	def _callback_commandline_shift_right(self, *args):
 		self.viewport.x_offset += 10
-		self.clear()
-		self.draw()
+		self.update()
 	def _callback_commandline_shift_return(self, *args):
 		self.viewport.reset()
 		self.viewport.theta = (math.pi / 4)
 		self.viewport.phi = -(math.pi / 16)
-		self.clear()
-		self.draw()
+		self.update()
 
 # CLIMBING CLASSES
 
@@ -249,7 +237,7 @@ CUSTOM = Wall((
 		))
 
 if __name__ == "__main__":
-	viewer = Viewer(800, 600)
+	viewer = IsometricViewer(800, 600)
 	for surface in CUSTOM.surfaces:
 		viewer.add_surface(Surface(CUSTOM.points[i] for i in surface))
 	viewer.mainloop()
