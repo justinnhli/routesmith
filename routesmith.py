@@ -48,25 +48,6 @@ class Point:
 		l = self.length()
 		return Point(self.x / l, self.y / l, self.z / l)
 
-class Line:
-	def __init__(self, p1, p2):
-		if hash(p1) < hash(p2):
-			self.p1 = p1
-			self.p2 = p2
-		else:
-			self.p1 = p2
-			self.p2 = p1
-	def __eq__(self, other):
-		return self.p1 == other.p1 and self.p2 == other.p2
-	def __ne__(self, other):
-		return not (self == other)
-	def __hash__(self):
-		return hash((hash(self.p1), hash(self.p2)))
-	def __str__(self):
-		return "({}, {})".format(self.p1, self.p2)
-	def clone(self):
-		return Line(self.p1, self.p2)
-
 class Surface:
 	def __init__(self, points=None):
 		if points is None:
@@ -82,6 +63,7 @@ class IsometricViewer:
 	def __init__(self, width, height):
 		self.width = width
 		self.height = height
+		self.wiremesh = True
 		self.reset_viewport()
 		self.init_gui()
 		self.bind_keys()
@@ -128,17 +110,24 @@ class IsometricViewer:
 			self.phi -= math.pi / 2;
 	def clear(self):
 		self.canvas.create_rectangle(0, 0, self.width + 10, self.height + 10, fill="white")
-	def draw(self):
+	def draw_wiremesh(self):
 		lines = set()
 		for surface in self.surfaces:
-			lines = lines.union(surface.get_lines())
-		for line in lines:
-			x1, y1 = self.project(line.p1)
-			x2, y2 = self.project(line.p2)
-			self.canvas.create_line(x1, y1, x2, y2)
+			for i in range(-1, len(surface.points) - 1):
+				p1 = surface.points[i]
+				p2 = surface.points[i+1]
+				if hash(p1) < hash(p2):
+					lines.add((self.project(p1), self.project(p2)))
+				else:
+					lines.add((self.project(p2), self.project(p1)))
+		for p1, p2 in lines:
+			self.canvas.create_line(p1[0], p1[1], p2[0], p2[1])
 	def update(self):
 		self.clear()
-		self.draw()
+		if self.wiremesh:
+			self.draw_wiremesh()
+		else:
+			draw()
 	def mainloop(self):
 		self.update()
 		mainloop()
@@ -174,8 +163,6 @@ class IsometricViewer:
 		self.update()
 	def _callback_commandline_shift_return(self, *args):
 		self.viewport.reset()
-		self.viewport.theta = (math.pi / 4)
-		self.viewport.phi = -(math.pi / 16)
 		self.update()
 
 # CLIMBING CLASSES
