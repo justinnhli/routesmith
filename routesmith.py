@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import math
+from abc import ABCMeta, abstractmethod
 from numbers import Real
 
 from tkinter import *
@@ -59,14 +60,32 @@ class Point:
 		return Point(self.x / l, self.y / l, self.z / l)
 
 class Surface:
+	TOLERANCE = 0.0005
 	def __init__(self, points=None):
 		if points is None:
 			self.points = []
 		else:
 			self.points = list(points)
-		# TODO make sure points are co-planar and surface is simple (no line intersections)
+		# find the plane (ax + by + cz = constant)
+		self.normal = (self.points[1] - self.points[0]).cross(self.points[2] - self.points[1]).normalize()
+		self.constant = self.normal.dot(self.points[0])
+		# make sure points are co-planar
+		assert all(abs(p.dot(self.normal) - self.constant) < Surface.TOLERANCE for p in self.points), "Surfaces are not planar"
+		# define an origin for this surface
+		self.origin = Point(min(p.x for p in self.points), min(p.y for p in self.points), 0)
+		if self.normal.z != 0:
+			self.origin.z = (self.normal.dot(self.origin) - self.constant) / -self.normal.z
+		# define the basis vetors
+		self.basis_x = Point(self.normal.z, 0, -self.normal.x).normalize()
+		self.basis_y = self.normal.cross(self.basis_x)
+		# TODO make sure surface is simple (no line intersections)
 
 # GRAPHICS CLASSES
+
+class Drawable(metaclass=ABCMeta):
+	@abstractmethod
+	def draw_wiremesh(self):
+		raise NotImplementedError()
 
 class IsometricViewer:
 	def __init__(self, width, height):
@@ -75,7 +94,7 @@ class IsometricViewer:
 		self.wiremesh = True
 		self.reset_viewport()
 		self.init_gui()
-		self.surfaces = []
+		self.drawables = []
 	def reset_viewport(self):
 		self.theta = (math.pi / 4)
 		self.phi = -(math.pi / 16)
@@ -97,8 +116,9 @@ class IsometricViewer:
 		self.canvas.bind("<Shift-Left>", self._callback_commandline_shift_left)
 		self.canvas.bind("<Shift-Right>", self._callback_commandline_shift_right)
 		self.canvas.bind("<Shift-Return>", self._callback_commandline_shift_return)
-	def add_surface(self, surface):
-		self.surfaces.append(surface)
+	def add_drawable(self, drawable):
+		assert isinstance(drawable, Drawable)
+		self.drawables.append(drawable)
 	def project(self, point):
 		projected = point.rotate(self.theta, self.phi)
 		return (projected.x * self.scale + self.x_offset, -projected.y * self.scale + self.y_offset)
@@ -117,25 +137,22 @@ class IsometricViewer:
 			self.phi -= math.pi / 2;
 	def clear(self):
 		self.canvas.create_rectangle(0, 0, self.width + 10, self.height + 10, fill="white")
+	def draw_line(self, p1, p2):
+		assert isinstance(p1, Point)
+		assert isinstance(p2, Point)
+		p1x, p1y = self.project(p1)
+		p2x, p2y = self.project(p2)
+		self.canvas.create_line(p1x, p1y, p2x, p2y)
 	def draw_wiremesh(self):
-		lines = set()
-		for surface in self.surfaces:
-			for i in range(len(surface.points)):
-				p1 = surface.points[i-1]
-				p2 = surface.points[i]
-				if hash(p1) < hash(p2):
-					lines.add((self.project(p1), self.project(p2)))
-				else:
-					lines.add((self.project(p2), self.project(p1)))
-		for p1, p2 in lines:
-			self.canvas.create_line(p1[0], p1[1], p2[0], p2[1])
+		for drawable in self.drawables:
+			drawable.draw_wiremesh(self)
 	def update(self):
 		self.clear()
 		if self.wiremesh:
 			self.draw_wiremesh()
 		else:
-			draw()
-	def mainloop(self):
+			self.draw()
+	def display(self):
 		self.update()
 		mainloop()
 	def _callback_commandline_up(self, *args):
@@ -174,32 +191,45 @@ class IsometricViewer:
 
 # CLIMBING CLASSES
 
-class Wall:
+class Wall(Drawable):
 	def __init__(self, points, surfaces):
-		self.points = points
-		self.surfaces = surfaces
 		center = Point(
-				(max(p.x for p in self.points) + min(p.x for p in self.points)) / 2,
-				(max(p.y for p in self.points) + min(p.y for p in self.points)) / 2,
-				(max(p.z for p in self.points) + min(p.z for p in self.points)) / 2)
-		self.points = tuple(p - center for p in self.points)
+				(max(p.x for p in points) + min(p.x for p in points)) / 2,
+				(max(p.y for p in points) + min(p.y for p in points)) / 2,
+				(max(p.z for p in points) + min(p.z for p in points)) / 2)
+		self.points = tuple(p - center for p in points)
+		self.surfaces = []
+		for surface in surfaces:
+			self.surfaces.append(Surface(self.points[i] for i in surface))
+	def draw_wiremesh(self, viewer):
+		for surface in self.surfaces:
+			for i in range(len(surface.points)):
+				viewer.draw_line(surface.points[i-1], surface.points[i])
 
-class Hold:
-	def __init__(self, wall, surface, position):
-		self.wall = wall
+class Hold(Drawable):
+	def __init__(self, surface, x, y):
 		self.surface = surface
-		self.position = position
-		pass
+		self.x = x
+		self.y = y
+	def draw_wiremesh(self, viewer):
+		viewer.draw_line(self.surface.origin, self.surface.origin + (self.x * self.surface.basis_x + self.y * self.surface.basis_y))
 
-class Problem:
-	def __init__(self):
+class Problem(Drawable):
+	def __init__(self, wall):
+		self.wall = wall
 		self.holds = []
 		self.start_holds = []
 		self.finish_holds = []
+	def add_hold(self, surface, x, y):
+		self.holds.append(Hold(self.wall.surfaces[surface], x, y))
 	def set_start_hold(self, index):
-		pass
+		self.start_holds.append(index)
 	def set_finish_hold(self, index):
-		pass
+		self.finish_holds.append(index)
+	def draw_wiremesh(self, viewer):
+		self.wall.draw_wiremesh(viewer)
+		for hold in self.holds:
+			hold.draw_wiremesh(viewer)
 
 CUSTOM = Wall((
 				Point(  0.0, 180,     0), # 0
@@ -231,7 +261,8 @@ CUSTOM = Wall((
 		))
 
 if __name__ == "__main__":
+	prob = Problem(CUSTOM)
+	prob.add_hold(0, 300, 20)
 	viewer = IsometricViewer(800, 600)
-	for surface in CUSTOM.surfaces:
-		viewer.add_surface(Surface(CUSTOM.points[i] for i in surface))
-	viewer.mainloop()
+	viewer.add_drawable(prob)
+	viewer.display()
