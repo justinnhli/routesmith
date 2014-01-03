@@ -135,7 +135,7 @@ class IsometricViewer:
 		self.drawables.append(drawable)
 	def project(self, point):
 		projected = point.rotate(self.theta, self.phi)
-		return (projected.x * self.scale + self.x_offset, -projected.y * self.scale + self.y_offset)
+		return Point(projected.x * self.scale + self.x_offset, -projected.y * self.scale + self.y_offset)
 	def move_camera(self, theta, phi):
 		self.theta += theta
 		if self.theta > 2 * math.pi:
@@ -151,12 +151,23 @@ class IsometricViewer:
 			self.phi -= math.pi / 2;
 	def clear(self):
 		self.canvas.create_rectangle(0, 0, self.width + 10, self.height + 10, fill="white")
-	def draw_line(self, p1, p2):
+	def draw_line(self, p1, p2, **kargs):
 		assert isinstance(p1, Point)
 		assert isinstance(p2, Point)
-		p1x, p1y = self.project(p1)
-		p2x, p2y = self.project(p2)
-		self.canvas.create_line(p1x, p1y, p2x, p2y)
+		p1 = self.project(p1)
+		p2 = self.project(p2)
+		self.canvas.create_line(p1.x, p1.y, p2.x, p2.y, **kargs)
+	def draw_circle(self, p, r, **kargs):
+		assert isinstance(p, Point)
+		p = self.project(p)
+		self.canvas.create_oval(p.x - r, p.y - r, p.x + r, p.y + r, **kargs)
+	def draw_polygon(self, pts, **kargs):
+		assert all(isinstance(p, Point) for p in pts)
+		args = []
+		for p in pts:
+			p = self.project(p)
+			args.extend((p.x, p.y))
+		self.canvas.create_polygon(*args, **kargs)
 	def draw_wiremesh(self):
 		for drawable in self.drawables:
 			drawable.draw_wiremesh(self)
@@ -217,15 +228,14 @@ class Wall(Drawable):
 			self.surfaces.append(Surface(self.points[i] for i in surface))
 	def draw_wiremesh(self, viewer):
 		for surface in self.surfaces:
-			for i in range(len(surface.points)):
-				viewer.draw_line(surface.points[i-1], surface.points[i])
+			viewer.draw_polygon(surface.points, outline="#000000", fill="")
 
 class Hold(Drawable):
 	def __init__(self, surface, x, y):
 		self.surface = surface
 		self.position = Point(x, y)
 	def draw_wiremesh(self, viewer):
-		viewer.draw_line(self.surface.origin, self.surface.origin + (self.position.x * self.surface.basis_x + self.position.y * self.surface.basis_y))
+		viewer.draw_circle(self.surface.origin + (self.position.x * self.surface.basis_x + self.position.y * self.surface.basis_y), 5, fill="#FF0000")
 
 class Problem(Drawable):
 	def __init__(self, wall):
