@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import math # FIXME should use numpy
+from numbers import Real
 
 from tkinter import *
 
@@ -20,14 +21,21 @@ class Point:
 	def __str__(self):
 		return "({}, {}, {})".format(self.x, self.y, self.z)
 	def __add__(self, p):
+		assert isinstance(p, Point)
 		return Point(self.x + p.x, self.y + p.y, self.z + p.z)
 	def __sub__(self, p):
+		assert isinstance(p, Point)
 		return Point(self.x - p.x, self.y - p.y, self.z - p.z)
 	def __neg__(self):
 		return Point(-self.x, -self.y, -self.z)
+	def __rmul__(self, r):
+		assert isinstance(r, Real)
+		return Point(r * self.x, r * self.y, r * self.z)
 	def dot(self, p):
+		assert isinstance(p, Point)
 		return self.x * p.x + self.y * p.y + self.z * p.z
 	def cross(self, p):
+		assert isinstance(p, Point)
 		return Point(self.y * p.z - self.z * p.y, self.z * p.x - self.x * p.z, self.x * p.y - self.y * p.x)
 	def rotate(self, theta, phi):
 		sin_theta = math.sin(theta)
