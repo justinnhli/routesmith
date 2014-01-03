@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import math # FIXME should use numpy
+import math
 from numbers import Real
 
 from tkinter import *
@@ -29,7 +29,7 @@ class Point:
 	def __neg__(self):
 		return Point(-self.x, -self.y, -self.z)
 	def __rmul__(self, r):
-		assert issubclass(r, Real)
+		assert isinstance(r, Real)
 		return Point(r * self.x, r * self.y, r * self.z)
 	def dot(self, p):
 		assert isinstance(p, Point)
