@@ -29,7 +29,7 @@ class Point:
 	def __neg__(self):
 		return Point(-self.x, -self.y, -self.z)
 	def __rmul__(self, r):
-		assert isinstance(r, Real)
+		assert issubclass(r, Real)
 		return Point(r * self.x, r * self.y, r * self.z)
 	def dot(self, p):
 		assert isinstance(p, Point)
