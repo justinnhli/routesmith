@@ -6,39 +6,51 @@ from numbers import Real
 
 from tkinter import *
 
-# MODELING CLASSES
+# ABSTRACT CLASSES
 
-class Point:
-	def __init__(self, x, y, z):
-		self.x = x
-		self.y = y
-		self.z = z
+class Point():
+	def __init__(self, *dimensions):
+		self.values = tuple(dimensions)
+	@property
+	def dimensions(self):
+		return len(self.values)
+	@property
+	def x(self):
+		return self.values[0]
+	@property
+	def y(self):
+		return self.values[1]
+	@property
+	def z(self):
+		return self.values[2]
 	def __eq__(self, other):
 		return hash(self) == hash(other)
 	def __ne__(self, other):
 		return not (self == other)
 	def __hash__(self):
-		return hash((self.x, self.y, self.z))
+		return hash(self.values)
 	def __str__(self):
-		return "({}, {}, {})".format(self.x, self.y, self.z)
+		return "(" + ", ".join("{}".format(i) for i in self.values) + ")"
 	def __add__(self, p):
-		assert isinstance(p, Point)
-		return Point(self.x + p.x, self.y + p.y, self.z + p.z)
+		assert isinstance(p, Point) and self.dimensions == p.dimensions
+		return Point(*(i + j for i, j in zip(self.values, p.values)))
 	def __sub__(self, p):
-		assert isinstance(p, Point)
-		return Point(self.x - p.x, self.y - p.y, self.z - p.z)
+		assert isinstance(p, Point) and self.dimensions == p.dimensions
+		return Point(*(i - j for i, j in zip(self.values, p.values)))
 	def __neg__(self):
-		return Point(-self.x, -self.y, -self.z)
+		assert isinstance(p, Point)
+		return Point(*(-i for i in self.values))
 	def __rmul__(self, r):
 		assert isinstance(r, Real)
-		return Point(r * self.x, r * self.y, r * self.z)
+		return Point(*(r * i for i in self.values))
 	def dot(self, p):
 		assert isinstance(p, Point)
-		return self.x * p.x + self.y * p.y + self.z * p.z
+		return sum(i * j for i, j in zip(self.values, p.values))
 	def cross(self, p):
-		assert isinstance(p, Point)
+		assert self.dimensions == 3 and isinstance(p, Point) and p.dimensions == 3
 		return Point(self.y * p.z - self.z * p.y, self.z * p.x - self.x * p.z, self.x * p.y - self.y * p.x)
 	def rotate(self, theta, phi):
+		assert self.dimensions == 3
 		sin_theta = math.sin(theta)
 		cos_theta = math.cos(theta)
 		sin_phi = math.sin(phi)
@@ -52,12 +64,19 @@ class Point:
 		z += self.z * cos_theta * cos_phi
 		return Point(x, y, z)
 	def clone(self):
-		return Point(self.x, self.y, self.z)
+		return Point(*self.values)
 	def length(self):
-		return math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
+		return math.sqrt(sum(i * i for i in self.values))
 	def normalize(self):
 		l = self.length()
-		return Point(self.x / l, self.y / l, self.z / l)
+		return Point(*(i / l for i in self.values))
+
+class Drawable(metaclass=ABCMeta):
+	@abstractmethod
+	def draw_wiremesh(self):
+		raise NotImplementedError()
+
+# MODELING CLASSES
 
 class Surface:
 	TOLERANCE = 0.0005
@@ -74,18 +93,13 @@ class Surface:
 		# define an origin for this surface
 		self.origin = Point(min(p.x for p in self.points), min(p.y for p in self.points), 0)
 		if self.normal.z != 0:
-			self.origin.z = (self.normal.dot(self.origin) - self.constant) / -self.normal.z
+			self.origin += Point(0, 0, (self.normal.dot(self.origin) - self.constant) / -self.normal.z)
 		# define the basis vetors
 		self.basis_x = Point(self.normal.z, 0, -self.normal.x).normalize()
 		self.basis_y = self.normal.cross(self.basis_x)
 		# TODO make sure surface is simple (no line intersections)
 
 # GRAPHICS CLASSES
-
-class Drawable(metaclass=ABCMeta):
-	@abstractmethod
-	def draw_wiremesh(self):
-		raise NotImplementedError()
 
 class IsometricViewer:
 	def __init__(self, width, height):
@@ -209,10 +223,9 @@ class Wall(Drawable):
 class Hold(Drawable):
 	def __init__(self, surface, x, y):
 		self.surface = surface
-		self.x = x
-		self.y = y
+		self.position = Point(x, y)
 	def draw_wiremesh(self, viewer):
-		viewer.draw_line(self.surface.origin, self.surface.origin + (self.x * self.surface.basis_x + self.y * self.surface.basis_y))
+		viewer.draw_line(self.surface.origin, self.surface.origin + (self.position.x * self.surface.basis_x + self.position.y * self.surface.basis_y))
 
 class Problem(Drawable):
 	def __init__(self, wall):
