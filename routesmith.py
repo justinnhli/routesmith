@@ -2,6 +2,7 @@
 
 import math
 from abc import ABCMeta, abstractmethod
+from collections import Counter
 from numbers import Real
 
 from tkinter import *
@@ -38,13 +39,12 @@ class Point():
 		assert isinstance(p, Point) and self.dimensions == p.dimensions
 		return Point(*(i - j for i, j in zip(self.values, p.values)))
 	def __neg__(self):
-		assert isinstance(p, Point)
 		return Point(*(-i for i in self.values))
 	def __rmul__(self, r):
 		assert isinstance(r, Real)
 		return Point(*(r * i for i in self.values))
 	def dot(self, p):
-		assert isinstance(p, Point)
+		assert isinstance(p, Point) and self.dimensions == p.dimensions
 		return sum(i * j for i, j in zip(self.values, p.values))
 	def cross(self, p):
 		assert self.dimensions == 3 and isinstance(p, Point) and p.dimensions == 3
@@ -86,17 +86,27 @@ class Surface:
 		else:
 			self.points = list(points)
 		# find the plane (ax + by + cz = constant)
-		self.normal = (self.points[1] - self.points[0]).cross(self.points[2] - self.points[1]).normalize()
+		self.normal = Counter((self.points[i-1] - self.points[i-2]).cross(self.points[i] - self.points[i-1]).normalize() for i in range(1, len(self.points))).most_common(1)[0][0]
 		self.constant = self.normal.dot(self.points[0])
 		# make sure points are co-planar
 		assert all(abs(p.dot(self.normal) - self.constant) < Surface.TOLERANCE for p in self.points), "Surfaces are not planar"
-		# define an origin for this surface
-		self.origin = Point(min(p.x for p in self.points), min(p.y for p in self.points), 0)
-		if self.normal.z != 0:
-			self.origin += Point(0, 0, (self.normal.dot(self.origin) - self.constant) / -self.normal.z)
-		# define the basis vetors
-		self.basis_x = Point(self.normal.z, 0, -self.normal.x).normalize()
+		# use the first point as a temporary origin
+		self.origin = self.points[0]
+		# define the first basis
+		if abs(self.normal.y) == 1:
+			# if the surface is horizontal, use the plane along z=0
+			self.basis_x = Point(self.normal.y, -self.normal.x, 0).normalize()
+		else:
+			# otherwise, use the plane along y=0
+			self.basis_x = Point(self.normal.z, 0, -self.normal.x).normalize()
+		if all(v <= 0 for v in self.basis_x.values):
+			self.basis_x = -self.basis_x
 		self.basis_y = self.normal.cross(self.basis_x)
+		# find the lowest transformed coordinates for each basis
+		min_x = min((self.points[i] - self.origin).dot(self.basis_x) for i in range(len(self.points)))
+		min_y = min((self.points[i] - self.origin).dot(self.basis_y) for i in range(len(self.points)))
+		# move the origin to that point
+		self.origin += min_x * self.basis_x + min_y * self.basis_y
 		# TODO make sure surface is simple (no line intersections)
 
 # GRAPHICS CLASSES
@@ -304,12 +314,12 @@ CUSTOM2 = ((
 				(555,  240,110.48),
 				(555,    0,110.48),
 		), (
-				(0, 1, 2, 3, 4, 5, 6, 7, 8),
+				(0, 1, 2, 3, 4, 6, 7, 8), # 0
 				(7, 6, 9),
 				(9, 6, 5, 10),
 				(10, 5, 11),
 				(11, 5, 4, 12),
-				(12, 13, 14),
+				(12, 13, 14), # 5
 				(13, 4, 3),
 				(3, 2, 15, 13),
 				(14, 13, 15, 16),
@@ -319,7 +329,8 @@ CUSTOM2 = ((
 if __name__ == "__main__":
 	wall = Wall(*CUSTOM)
 	prob = Problem(wall)
-	prob.add_hold(0, 300, 20)
+	for i in range(len(wall.surfaces)):
+		prob.add_hold(i, 0, 0)
 	viewer = IsometricViewer(800, 600)
 	viewer.add_drawable(prob)
 	viewer.display()
