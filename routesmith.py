@@ -7,11 +7,15 @@ from numbers import Real
 
 from tkinter import *
 
+# CONSTANTS
+
+TOLERANCE = 0.0005
+
 # ABSTRACT CLASSES
 
 class Point():
 	def __init__(self, *dimensions):
-		self.values = tuple(dimensions)
+		self.values = tuple(0 if abs(i) < TOLERANCE else i for i in dimensions)
 	@property
 	def dimensions(self):
 		return len(self.values)
@@ -79,7 +83,6 @@ class Drawable(metaclass=ABCMeta):
 # MODELING CLASSES
 
 class Surface:
-	TOLERANCE = 0.0005
 	def __init__(self, points=None):
 		if points is None:
 			self.points = []
@@ -89,7 +92,7 @@ class Surface:
 		self.normal = Counter((self.points[i-1] - self.points[i-2]).cross(self.points[i] - self.points[i-1]).normalize() for i in range(1, len(self.points))).most_common(1)[0][0]
 		self.constant = self.normal.dot(self.points[0])
 		# make sure points are co-planar
-		assert all(abs(p.dot(self.normal) - self.constant) < Surface.TOLERANCE for p in self.points), "Surfaces are not planar"
+		assert all(abs(p.dot(self.normal) - self.constant) < TOLERANCE for p in self.points), "Surfaces are not planar"
 		# use the first point as a temporary origin
 		self.origin = self.points[0]
 		# define the first basis
@@ -99,6 +102,7 @@ class Surface:
 		else:
 			# otherwise, use the plane along y=0
 			self.basis_x = Point(self.normal.z, 0, -self.normal.x).normalize()
+		# FIXME this is local, not global; it must take the normal into account
 		if all(v <= 0 for v in self.basis_x.values):
 			self.basis_x = -self.basis_x
 		self.basis_y = self.normal.cross(self.basis_x)
