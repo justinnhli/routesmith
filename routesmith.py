@@ -73,7 +73,7 @@ class Point():
 
 class Drawable(metaclass=ABCMeta):
 	@abstractmethod
-	def draw_wiremesh(self):
+	def draw_wireframe(self):
 		raise NotImplementedError()
 
 # MODELING CLASSES
@@ -105,7 +105,7 @@ class IsometricViewer:
 	def __init__(self, width, height):
 		self.width = width
 		self.height = height
-		self.wiremesh = True
+		self.wireframe = True
 		self.reset_viewport()
 		self.init_gui()
 		self.drawables = []
@@ -168,13 +168,13 @@ class IsometricViewer:
 			p = self.project(p)
 			args.extend((p.x, p.y))
 		self.canvas.create_polygon(*args, **kargs)
-	def draw_wiremesh(self):
+	def draw_wireframe(self):
 		for drawable in self.drawables:
-			drawable.draw_wiremesh(self)
+			drawable.draw_wireframe(self)
 	def update(self):
 		self.clear()
-		if self.wiremesh:
-			self.draw_wiremesh()
+		if self.wireframe:
+			self.draw_wireframe()
 		else:
 			self.draw()
 	def display(self):
@@ -211,7 +211,7 @@ class IsometricViewer:
 		self.x_offset += 10
 		self.update()
 	def _callback_commandline_shift_return(self, *args):
-		self.reset()
+		self.reset_viewport()
 		self.update()
 
 # CLIMBING CLASSES
@@ -226,7 +226,7 @@ class Wall(Drawable):
 		self.surfaces = []
 		for surface in surfaces:
 			self.surfaces.append(Surface(self.points[i] for i in surface))
-	def draw_wiremesh(self, viewer):
+	def draw_wireframe(self, viewer):
 		for surface in self.surfaces:
 			viewer.draw_polygon(surface.points, outline="#000000", fill="")
 
@@ -234,7 +234,7 @@ class Hold(Drawable):
 	def __init__(self, surface, x, y):
 		self.surface = surface
 		self.position = Point(x, y)
-	def draw_wiremesh(self, viewer):
+	def draw_wireframe(self, viewer):
 		viewer.draw_circle(self.surface.origin + (self.position.x * self.surface.basis_x + self.position.y * self.surface.basis_y), 5, fill="#FF0000")
 
 class Problem(Drawable):
@@ -249,10 +249,10 @@ class Problem(Drawable):
 		self.start_holds.append(index)
 	def set_finish_hold(self, index):
 		self.finish_holds.append(index)
-	def draw_wiremesh(self, viewer):
-		self.wall.draw_wiremesh(viewer)
+	def draw_wireframe(self, viewer):
+		self.wall.draw_wireframe(viewer)
 		for hold in self.holds:
-			hold.draw_wiremesh(viewer)
+			hold.draw_wireframe(viewer)
 
 CUSTOM = Wall((
 				Point(  0.0, 180,     0), # 0
