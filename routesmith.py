@@ -241,16 +241,16 @@ class Wall(Drawable):
 		self.surfaces = []
 		for surface in surfaces:
 			self.surfaces.append(Surface(self.points[i] for i in surface))
-	def draw_wireframe(self, viewer):
+	def draw_wireframe(self, viewer, **kargs):
 		for surface in self.surfaces:
-			viewer.draw_polygon(surface.points, outline="#000000", fill="")
+			viewer.draw_polygon(surface.points, outline="#000000", fill="", **kargs)
 
 class Hold(Drawable):
 	def __init__(self, surface, x, y):
 		self.surface = surface
 		self.position = Point(x, y)
-	def draw_wireframe(self, viewer):
-		viewer.draw_circle(self.surface.origin + (self.position.x * self.surface.basis_x + self.position.y * self.surface.basis_y), 5, fill="#FF0000")
+	def draw_wireframe(self, viewer, **kargs):
+		viewer.draw_circle(self.surface.origin + (self.position.x * self.surface.basis_x + self.position.y * self.surface.basis_y), 5, **kargs)
 
 class Problem(Drawable):
 	def __init__(self, wall):
@@ -260,14 +260,19 @@ class Problem(Drawable):
 		self.finish_holds = []
 	def add_hold(self, surface, x, y):
 		self.holds.append(Hold(self.wall.surfaces[surface], x, y))
-	def set_start_hold(self, index):
+	def add_start_hold(self, index):
 		self.start_holds.append(index)
-	def set_finish_hold(self, index):
+	def add_finish_hold(self, index):
 		self.finish_holds.append(index)
 	def draw_wireframe(self, viewer):
 		self.wall.draw_wireframe(viewer)
-		for hold in self.holds:
-			hold.draw_wireframe(viewer)
+		for index, hold in enumerate(self.holds):
+			if index in self.start_holds:
+				hold.draw_wireframe(viewer, fill="#FF0000")
+			elif index in self.finish_holds:
+				hold.draw_wireframe(viewer, fill="#00FF00")
+			else:
+				hold.draw_wireframe(viewer, fill="#0000FF")
 
 CUSTOM = ((
 				(  0.0, 180,     0), # 0
@@ -331,46 +336,59 @@ CUSTOM2 = ((
 		))
 
 CUSTOM2_PROB_1 = (
-		CUSTOM2, (
-				(0, 40, 10),
-				(0, 80, 40),
-				(0, 40, 70),
-				(0, 80, 100),
-				(0, 40, 130),
-				(0, 80, 160),
-				(0, 40, 190),
-				(0, 80, 220),
+		CUSTOM2, ((
+						(0, 40, 10),
+						(0, 80, 40),
+						(0, 40, 70),
+						(0, 80, 100),
+						(0, 40, 130),
+						(0, 80, 160),
+						(0, 40, 190),
+						(0, 80, 220),
+				),
+				(2,),
+				(7,),
 		))
 
 CUSTOM2_PROB_2 = (
-		CUSTOM2, (
-				(2, 40, 10),
-				(2, 80, 40),
-				(2, 40, 70),
-				(2, 80, 100),
-				(2, 40, 130),
-				(2, 80, 160),
-				(2, 40, 190),
-				(2, 80, 220),
+		CUSTOM2, ((
+						(2, 40, 10),
+						(2, 80, 40),
+						(2, 40, 70),
+						(2, 80, 100),
+						(2, 40, 130),
+						(2, 80, 160),
+						(2, 40, 190),
+						(2, 80, 220),
+				),
+				(2,),
+				(7,),
 		))
 
 CUSTOM2_PROB_3 = (
-		CUSTOM2, (
-				(4, 40, 10),
-				(4, 80, 40),
-				(4, 40, 70),
-				(4, 80, 100),
-				(4, 40, 130),
-				(4, 80, 160),
-				(4, 40, 190),
-				(4, 80, 220),
+		CUSTOM2, ((
+						(4, 40, 10),
+						(4, 80, 40),
+						(4, 40, 70),
+						(4, 80, 100),
+						(4, 40, 130),
+						(4, 80, 160),
+						(4, 40, 190),
+						(4, 80, 220),
+				),
+				(2,),
+				(7,),
 		))
 
 if __name__ == "__main__":
 	problem = CUSTOM2_PROB_3
 	prob = Problem(Wall(*problem[0]))
-	for hold in problem[1]:
+	for hold in problem[1][0]:
 		prob.add_hold(*hold)
+	for hold in problem[1][1]:
+		prob.add_start_hold(hold)
+	for hold in problem[1][2]:
+		prob.add_finish_hold(hold)
 	viewer = IsometricViewer(800, 600)
 	viewer.add_drawable(prob)
 	viewer.display()
