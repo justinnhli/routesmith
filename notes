@@ -1,0 +1,37 @@
+focus on just positioning for now
+
+focus on just three attributes for now
+width
+depth
+orientation
+
+pull direction along the wall
+directionality variance on the plane of the wall
+effort required to hang on the hold perpendicular to the wall
+effort required to match on the hold
+effort required to hang in direction of pull
+forgiveness for overshooting
+
+
+how do pinches, which can be used in multiple directions, fit into this framework?
+there may be multiple directionals and variances
+note that you can pull down on a pinch - the multiple directionality thing doesn't help there
+this suggests that pinches are is own dimension
+
+what are the independent effects of wall geometry and hold position?
+imagine a vertical line of matchable rings
+on anything up to vertical, would be a "classic" V0 - a ladder
+as the wall becomes steeper, the route gets harder - but no more than V3 when it becomes a roof
+well, what would you rate a set of monkey bars? V2?
+
+okay, now imagine two vertical lines of non-matchable rings
+imagine in between, the wall bends to either be an arete, a face, or a dihedral
+
+or would be ideal if I don't have to do any physics simulations
+
+project goals
+generate random bouldering caves given room dimensions
+generate random bouldering problems given wall and difficulty (and maybe movement)
+assess the difficulty of a bouldering problem
+solve a bouldering problem
+create climbing animations
