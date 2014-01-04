@@ -330,11 +330,47 @@ CUSTOM2 = ((
 				(16, 15, 2, 1, 17),
 		))
 
+CUSTOM2_PROB_1 = (
+		CUSTOM2, (
+				(0, 40, 10),
+				(0, 80, 40),
+				(0, 40, 70),
+				(0, 80, 100),
+				(0, 40, 130),
+				(0, 80, 160),
+				(0, 40, 190),
+				(0, 80, 220),
+		))
+
+CUSTOM2_PROB_2 = (
+		CUSTOM2, (
+				(2, 40, 10),
+				(2, 80, 40),
+				(2, 40, 70),
+				(2, 80, 100),
+				(2, 40, 130),
+				(2, 80, 160),
+				(2, 40, 190),
+				(2, 80, 220),
+		))
+
+CUSTOM2_PROB_3 = (
+		CUSTOM2, (
+				(4, 40, 10),
+				(4, 80, 40),
+				(4, 40, 70),
+				(4, 80, 100),
+				(4, 40, 130),
+				(4, 80, 160),
+				(4, 40, 190),
+				(4, 80, 220),
+		))
+
 if __name__ == "__main__":
-	wall = Wall(*CUSTOM)
-	prob = Problem(wall)
-	for i in range(len(wall.surfaces)):
-		prob.add_hold(i, 0, 0)
+	problem = CUSTOM2_PROB_3
+	prob = Problem(Wall(*problem[0]))
+	for hold in problem[1]:
+		prob.add_hold(*hold)
 	viewer = IsometricViewer(800, 600)
 	viewer.add_drawable(prob)
 	viewer.display()
