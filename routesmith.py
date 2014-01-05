@@ -102,10 +102,10 @@ class Surface:
 		else:
 			# otherwise, use the plane along y=0
 			self.basis_x = Point(self.normal.z, 0, -self.normal.x).normalize()
-		# FIXME this is local, not global; it must take the normal into account
-		if all(v <= 0 for v in self.basis_x.values):
-			self.basis_x = -self.basis_x
 		self.basis_y = self.normal.cross(self.basis_x)
+		if self.basis_y.y < 0:
+			self.basis_x = -self.basis_x
+			self.basis_y = -self.basis_y
 		# find the lowest transformed coordinates for each basis
 		min_x = min((self.points[i] - self.origin).dot(self.basis_x) for i in range(len(self.points)))
 		min_y = min((self.points[i] - self.origin).dot(self.basis_y) for i in range(len(self.points)))
