@@ -2,7 +2,8 @@
 
 import math
 from abc import ABCMeta, abstractmethod
-from collections import Counter
+from collections import Counter, deque
+from copy import copy
 from numbers import Real
 
 from tkinter import *
@@ -53,6 +54,8 @@ class Point():
 	def cross(self, p):
 		assert self.dimensions == 3 and isinstance(p, Point) and p.dimensions == 3
 		return Point(self.y * p.z - self.z * p.y, self.z * p.x - self.x * p.z, self.x * p.y - self.y * p.x)
+	def angle(self, p):
+		return math.acos(self.dot(p) / (self.length() * p.length()))
 	def rotate(self, theta, phi):
 		assert self.dimensions == 3
 		sin_theta = math.sin(theta)
@@ -85,14 +88,14 @@ class Drawable(metaclass=ABCMeta):
 class Surface:
 	def __init__(self, points=None):
 		if points is None:
-			self.points = []
+			self.points = deque()
 		else:
-			self.points = list(points)
+			self.points = deque(points)
 		# find the plane (ax + by + cz = constant)
 		self.normal = Counter((self.points[i-1] - self.points[i-2]).cross(self.points[i] - self.points[i-1]).normalize() for i in range(1, len(self.points))).most_common(1)[0][0]
 		self.constant = self.normal.dot(self.points[0])
 		# make sure points are co-planar
-		assert all(abs(p.dot(self.normal) - self.constant) < TOLERANCE for p in self.points), "Surfaces are not planar"
+		assert all(abs(p.dot(self.normal) - self.constant) < TOLERANCE for p in self.points), "Vertices are not planar"
 		# use the first point as a temporary origin
 		self.origin = self.points[0]
 		# define the first basis
@@ -112,6 +115,8 @@ class Surface:
 		# move the origin to that point
 		self.origin += min_x * self.basis_x + min_y * self.basis_y
 		# TODO make sure surface is simple (no line intersections)
+	def real_coords(self, point):
+		return self.origin + (point.x * self.basis_x + point.y * self.basis_y)
 
 # GRAPHICS CLASSES
 
@@ -237,6 +242,7 @@ class Wall(Drawable):
 				(max(p.x for p in points) + min(p.x for p in points)) / 2,
 				(max(p.y for p in points) + min(p.y for p in points)) / 2,
 				(max(p.z for p in points) + min(p.z for p in points)) / 2)
+		center = Point(0, 0, 0)
 		self.points = tuple(p - center for p in points)
 		self.surfaces = []
 		for surface in surfaces:
@@ -249,8 +255,10 @@ class Hold(Drawable):
 	def __init__(self, surface, x, y):
 		self.surface = surface
 		self.position = Point(x, y)
+	def real_coords(self):
+		return self.surface.real_coords(self.position)
 	def draw_wireframe(self, viewer, **kargs):
-		viewer.draw_circle(self.surface.origin + (self.position.x * self.surface.basis_x + self.position.y * self.surface.basis_y), 5, **kargs)
+		viewer.draw_circle(self.real_coords(), 5, **kargs)
 
 class Problem(Drawable):
 	def __init__(self, wall):
@@ -273,114 +281,125 @@ class Problem(Drawable):
 				hold.draw_wireframe(viewer, fill="#00FF00")
 			else:
 				hold.draw_wireframe(viewer, fill="#0000FF")
+	def create_graph(self):
+		distances = {}
+		for i in range(len(self.holds)):
+			for j in range(i+1, len(self.holds)):
+				h1 = self.holds[i]
+				h2 = self.holds[j]
+				vector = h2.real_coords() - h1.real_coords()
+				# figure out if the wall between is convex or concave
+				if vector.angle(h1.surface.normal) <= math.pi / 2:
+					# it's not a bulge; distance is simply straight line distance
+					# FIXME technically, a bulge could appear *between* the holds
+					distances[(i, j)] = vector.length()
+				else:
+					# it's a bulge; need to calculate wall distance
+					print(("start hold = ", str(h1.real_coords())))
+					print(("end hold = ", str(h2.real_coords())))
+					print()
+					surface = h1.surface
+					print(list(str(p) for p in surface.points))
+					print()
+					source = h1.real_coords()
+					distance = 0
+					done = False
+					while not done:
+						# project vector onto wall
+						projection = vector - (vector.dot(surface.normal)) * surface.normal
+						# find the edge that this projection crosses
+						rotated_points = copy(surface.points)
+						rotated_points.rotate(-1)
+						for p1, p2 in zip(surface.points, rotated_points):
+							# find where the edge and the projection intersects
+							edge = p2 - p1
+							print(p1)
+							print(p2)
+							print(("edge = ", str(edge)))
+							print(("projection = ", str(projection)))
+							# find the coefficients that allows one dimension to match up
+							coefficient = 0
+							# FIXME need to make sure edge is not parallel to projection
+							# FIXME although, if p1 == source...
+							if edge.x != 0:
+								print("using xy for coefficient")
+								print(projection.y - (edge.y / edge.x) * projection.x)
+								coefficient = (p1.y + (edge.y / edge.x) * (p1.x - source.x) - source.y) / (projection.y - (edge.y / edge.x) * projection.x)
+							if edge.y != 0:
+								print("using yz for coefficient")
+								print(projection.z - (edge.z / edge.y) * projection.y)
+								coefficient = (p1.z + (edge.z / edge.y) * (p1.y - source.y) - source.z) / (projection.z - (edge.z / edge.y) * projection.y)
+							else:
+								print("using zx for coefficient")
+								print(projection.x - (edge.x / edge.z) * projection.z)
+								coefficient = (p1.x + (edge.x / edge.z) * (p1.z + source.z) - source.x) / (projection.x - (edge.x / edge.z) * projection.z)
+							# check that the intersection is within the edge
+							print(("coefficient = ", coefficient))
+							print(p1 + coefficient * edge)
+							print(source + coefficient * projection)
+							print()
+							if (p1 + coefficient * edge) != (source + coefficient * projection):
+								continue
+							intersection = source + coefficient * projection
+							print(("intersection = ", str(intersection)))
+							# add to the distance
+							distance += (intersection - p1).length()
+							print(("added distance = ", (intersection - p1).length()))
+							# find the next wall
+							candidates = [s for s in self.wall.surfaces if s != surface and p1 in s.points and p2 in s.points]
+							print(len(candidates))
+							assert len(candidates) == 1
+							surface = candidates[0]
+							print(list(str(p) for p in surface.points))
+							source = intersection
+							# move on to the next wall
+							print()
+							break
+						else:
+							# this is the wall with the ending hold
+							distance += (h2.real_coords() - source).length()
+							distances[(i, j)] = distance
+							done = True
+		print(distances)
 
-CUSTOM = ((
-				(  0.0, 180,     0), # 0
-				(  0.0,   0,     0),
-				( 67.5, 180, 103.5),
-				( 67.5,  45,     0),
-				(135.0, 180,     0),
-				(157.5, 180,     0), # 5
-				(261.0, 180, 103.5),
-				(261.0,  45,     0),
-				(450.0, 180, 103.5),
-				(450.0,  45,     0),
-				(450.0,   0,     0), # 10
-				(553.5,  45, 103.5),
-				(553.5,   0, 103.5),
-				(450.0, 180, 225.0),
-				(553.5,  45, 225.0),
-				(553.5,   0, 225.0), # 15
-		), (
-				(0, 1, 10, 9, 7, 5, 4, 3),
-				(0, 3, 2),
-				(3, 4, 2),
-				(5, 7, 6),
-				(6, 7, 9, 8),
-				(8, 9, 11),
-				(9, 10, 12, 11),
-				(8, 11, 14, 13),
-				(11, 12, 15, 14),
-		))
 
-CUSTOM2 = ((
-				(  0,    0,     0), # 0
-				(555,    0,     0),
-				(555,  150,     0),
-				(480,  150,     0),
-				(480, 8.75,     0),
-				(360, 8.75,     0), # 5
-				(240, 8.75,     0),
-				(240,  240,     0),
-				(  0,  240,     0),
-				(240,  240, 75.14),
-				(360,  240, 75.14), # 10
-				(360,  240, 95.79),
-				(480,  240, 95.79),
-				(480,  150, 58.51),
-				(480,  240,110.48),
-				(555,  150, 58.51), # 15
-				(555,  240,110.48),
-				(555,    0,110.48),
-		), (
-				(0, 1, 2, 3, 4, 6, 7, 8), # 0
-				(7, 6, 9),
-				(9, 6, 5, 10),
-				(10, 5, 11),
-				(11, 5, 4, 12),
-				(12, 13, 14), # 5
-				(13, 4, 3),
-				(3, 2, 15, 13),
-				(14, 13, 15, 16),
-				(16, 15, 2, 1, 17),
-		))
-
-CUSTOM2_PROB_1 = (
-		CUSTOM2, ((
-						(0, 40, 10),
-						(0, 80, 40),
-						(0, 40, 70),
-						(0, 80, 100),
-						(0, 40, 130),
-						(0, 80, 160),
-						(0, 40, 190),
-						(0, 80, 220),
-				),
-				(2,),
-				(7,),
-		))
-
-CUSTOM2_PROB_2 = (
-		CUSTOM2, ((
-						(2, 40, 10),
-						(2, 80, 40),
-						(2, 40, 70),
-						(2, 80, 100),
-						(2, 40, 130),
-						(2, 80, 160),
-						(2, 40, 190),
-						(2, 80, 220),
-				),
-				(2,),
-				(7,),
-		))
-
-CUSTOM2_PROB_3 = (
-		CUSTOM2, ((
-						(4, 40, 10),
-						(4, 80, 40),
-						(4, 40, 70),
-						(4, 80, 100),
-						(4, 40, 130),
-						(4, 80, 160),
-						(4, 40, 190),
-						(4, 80, 220),
-				),
-				(2,),
-				(7,),
-		))
 
 if __name__ == "__main__":
+	simple_wall = ((
+					(   0, 180, 0), # 0
+					(   0,   0, 0),
+					( 180,   0, 0),
+					( 180, 180, 0),
+					( 180,   0, 180),
+					( 180, 180, 180), # 5
+					( 360,   0, 180),
+					( 360, 180, 180),
+			), (
+					(0, 1, 2, 3),
+					(3, 2, 4, 5),
+					(5, 4, 6, 7),
+			))
+	simple_prob = (
+			simple_wall,
+			(
+				(
+					(0,  90,  90),
+					(1,  90,  90),
+					(2,  90,  90),
+				),
+				[],
+				[],
+			))
+	wall = Wall(*simple_wall)
+	prob = Problem(wall)
+	for hold in simple_prob[1][0]:
+		prob.add_hold(*hold)
+	viewer = IsometricViewer(800, 600)
+	viewer.add_drawable(prob)
+	prob.create_graph()
+#	viewer.display()
+
+	"""
 	problem = CUSTOM2_PROB_3
 	prob = Problem(Wall(*problem[0]))
 	for hold in problem[1][0]:
@@ -392,3 +411,4 @@ if __name__ == "__main__":
 	viewer = IsometricViewer(800, 600)
 	viewer.add_drawable(prob)
 	viewer.display()
+	"""
