@@ -56,6 +56,9 @@ class Point():
 		return Point(self.y * p.z - self.z * p.y, self.z * p.x - self.x * p.z, self.x * p.y - self.y * p.x)
 	def angle(self, p):
 		return math.acos(self.dot(p) / (self.length() * p.length()))
+	def project(self, p):
+		assert isinstance(p, Point) and self.dimensions == p.dimensions
+		return self - (self.dot(p) / p.length()) * p
 	def rotate(self, theta, phi):
 		assert self.dimensions == 3
 		sin_theta = math.sin(theta)
@@ -115,8 +118,14 @@ class Surface:
 		# move the origin to that point
 		self.origin += min_x * self.basis_x + min_y * self.basis_y
 		# TODO make sure surface is simple (no line intersections)
-	def real_coords(self, point):
+	def pos2coord(self, point):
 		return self.origin + (point.x * self.basis_x + point.y * self.basis_y)
+	def coord2pos(self, point):
+		assert point.dot(self.normal) == self.constant
+		offset = (point - self.origin)
+		return Point(offset.dot(self.basis_x), offset.dot(self.basis_y))
+	def project(self, vector):
+		return vector - (vector - self.points[0]).dot(self.normal) * self.normal
 
 # GRAPHICS CLASSES
 
@@ -256,7 +265,7 @@ class Hold(Drawable):
 		self.surface = surface
 		self.position = Point(x, y)
 	def real_coords(self):
-		return self.surface.real_coords(self.position)
+		return self.surface.pos2coord(self.position)
 	def draw_wireframe(self, viewer, **kargs):
 		viewer.draw_circle(self.real_coords(), 5, **kargs)
 
@@ -299,70 +308,40 @@ class Problem(Drawable):
 					print(("end hold = ", str(h2.real_coords())))
 					print()
 					surface = h1.surface
-					print(list(str(p) for p in surface.points))
-					print()
 					source = h1.real_coords()
 					distance = 0
 					done = False
 					while not done:
 						# project vector onto wall
-						projection = vector - (vector.dot(surface.normal)) * surface.normal
+						projection = surface.project(vector)
+						hold_source = surface.coord2pos(source)
+						hold_vector = (surface.coord2pos(surface.project(source + projection)) - hold_source).normalize()
 						# find the edge that this projection crosses
 						rotated_points = copy(surface.points)
 						rotated_points.rotate(-1)
 						for p1, p2 in zip(surface.points, rotated_points):
 							# find where the edge and the projection intersects
-							edge = p2 - p1
-							print(p1)
-							print(p2)
-							print(("edge = ", str(edge)))
-							print(("projection = ", str(projection)))
-							# find the coefficients that allows one dimension to match up
-							coefficient = 0
-							# FIXME need to make sure edge is not parallel to projection
-							# FIXME although, if p1 == source...
-							if edge.x != 0:
-								print("using xy for coefficient")
-								print(projection.y - (edge.y / edge.x) * projection.x)
-								coefficient = (p1.y + (edge.y / edge.x) * (p1.x - source.x) - source.y) / (projection.y - (edge.y / edge.x) * projection.x)
-							if edge.y != 0:
-								print("using yz for coefficient")
-								print(projection.z - (edge.z / edge.y) * projection.y)
-								coefficient = (p1.z + (edge.z / edge.y) * (p1.y - source.y) - source.z) / (projection.z - (edge.z / edge.y) * projection.y)
-							else:
-								print("using zx for coefficient")
-								print(projection.x - (edge.x / edge.z) * projection.z)
-								coefficient = (p1.x + (edge.x / edge.z) * (p1.z + source.z) - source.x) / (projection.x - (edge.x / edge.z) * projection.z)
-							# check that the intersection is within the edge
-							print(("coefficient = ", coefficient))
-							print(p1 + coefficient * edge)
-							print(source + coefficient * projection)
-							print()
-							if (p1 + coefficient * edge) != (source + coefficient * projection):
+							edge_source = surface.coord2pos(p1)
+							edge_vector = (surface.coord2pos(p2) - edge_source).normalize()
+							# frame the system of equations as a projection
+							solution = Point((edge_source - hold_source).dot(hold_vector), (edge_source - hold_source).dot(edge_vector))
+							# discard if the solution is not, in fact, an intersection
+							if hold_source + solution.x * hold_vector != edge_source + solution.x * edge_vector:
 								continue
-							intersection = source + coefficient * projection
-							print(("intersection = ", str(intersection)))
 							# add to the distance
-							distance += (intersection - p1).length()
-							print(("added distance = ", (intersection - p1).length()))
+							distance += solution.x
 							# find the next wall
 							candidates = [s for s in self.wall.surfaces if s != surface and p1 in s.points and p2 in s.points]
-							print(len(candidates))
 							assert len(candidates) == 1
+							source = surface.pos2coord(hold_source + solution.x * hold_vector)
 							surface = candidates[0]
-							print(list(str(p) for p in surface.points))
-							source = intersection
 							# move on to the next wall
-							print()
 							break
 						else:
 							# this is the wall with the ending hold
 							distance += (h2.real_coords() - source).length()
 							distances[(i, j)] = distance
 							done = True
-		print(distances)
-
-
 
 if __name__ == "__main__":
 	simple_wall = ((
