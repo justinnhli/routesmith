@@ -5,6 +5,8 @@ from abc import ABCMeta, abstractmethod
 from collections import Counter, deque
 from copy import copy
 from numbers import Real
+from os import chdir as cd
+from os.path import basename, dirname, expanduser, join as join_path, realpath
 
 from tkinter import *
 
@@ -251,7 +253,6 @@ class Wall(Drawable):
 				(max(p.x for p in points) + min(p.x for p in points)) / 2,
 				(max(p.y for p in points) + min(p.y for p in points)) / 2,
 				(max(p.z for p in points) + min(p.z for p in points)) / 2)
-		center = Point(0, 0, 0)
 		self.points = tuple(p - center for p in points)
 		self.surfaces = []
 		for surface in surfaces:
@@ -270,11 +271,11 @@ class Hold(Drawable):
 		viewer.draw_circle(self.real_coords(), 5, **kargs)
 
 class Problem(Drawable):
-	def __init__(self, wall):
+	def __init__(self, wall, holds=None, start_holds=None, finish_holds=None):
 		self.wall = wall
-		self.holds = []
-		self.start_holds = []
-		self.finish_holds = []
+		self.holds = [] if holds is None else list(Hold(self.wall.surfaces[surface], x, y) for surface, x, y in holds)
+		self.start_holds = [] if start_holds is None else start_holds
+		self.finish_holds = [] if finish_holds is None else finish_holds
 	def add_hold(self, surface, x, y):
 		self.holds.append(Hold(self.wall.surfaces[surface], x, y))
 	def add_start_hold(self, index):
@@ -304,9 +305,6 @@ class Problem(Drawable):
 					distances[(i, j)] = vector.length()
 				else:
 					# it's a bulge; need to calculate wall distance
-					print(("start hold = ", str(h1.real_coords())))
-					print(("end hold = ", str(h2.real_coords())))
-					print()
 					surface = h1.surface
 					source = h1.real_coords()
 					distance = 0
@@ -343,6 +341,32 @@ class Problem(Drawable):
 							distances[(i, j)] = distance
 							done = True
 
+def create_wall_from_file(path):
+	sections = []
+	with open(path) as fd:
+		sections = fd.read().strip().split("\n\n")
+	vertices = tuple(tuple(float(r) for r in line.split()) for line in sections[0].strip().splitlines())
+	surfaces = tuple(tuple(int(n) for n in line.split()) for line in sections[1].strip().splitlines())
+	return Wall(vertices, surfaces)
+
+def create_problem_from_file(path):
+	sections = []
+	path = realpath(expanduser(path))
+	with open(path) as fd:
+		sections = fd.read().strip().split("\n\n")
+	wall_path = sections[0].strip()
+	if not wall_path.startswith("/"):
+		wall_path = join_path(dirname(path), wall_path)
+	wall = create_wall_from_file(wall_path)
+	holds = []
+	for line in sections[1].strip().splitlines():
+		surface, x, y = line.split()
+		holds.append((int(surface), float(x), float(y)))
+	starts = tuple(int(n) for n in sections[2].strip().split())
+	finishes = tuple(int(n) for n in sections[3].strip().split())
+	return Problem(wall, holds, starts, finishes)
+
+
 if __name__ == "__main__":
 	simple_wall = ((
 					(   0, 180, 0), # 0
@@ -376,18 +400,4 @@ if __name__ == "__main__":
 	viewer = IsometricViewer(800, 600)
 	viewer.add_drawable(prob)
 	prob.create_graph()
-#	viewer.display()
-
-	"""
-	problem = CUSTOM2_PROB_3
-	prob = Problem(Wall(*problem[0]))
-	for hold in problem[1][0]:
-		prob.add_hold(*hold)
-	for hold in problem[1][1]:
-		prob.add_start_hold(hold)
-	for hold in problem[1][2]:
-		prob.add_finish_hold(hold)
-	viewer = IsometricViewer(800, 600)
-	viewer.add_drawable(prob)
 	viewer.display()
-	"""
