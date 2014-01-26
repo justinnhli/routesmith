@@ -356,6 +356,13 @@ class Problem(Drawable):
 
 # CLIMBER CLASSES
 
+class Pose:
+	def __init__(self, left_hand, right_hand, left_foot, right_foot):
+		self.left_hand = left_hand
+		self.right_hand = right_hand
+		self.left_foot = left_foot
+		self.right_foot = right_foot
+
 class Climber:
 	def __init__(self):
 		self.height = 175
