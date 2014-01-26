@@ -394,9 +394,9 @@ class Climber:
 						edge_source = surface.coord2pos(p1)
 						edge_vector = (surface.coord2pos(p2) - edge_source).normalize()
 						# frame the system of equations as a projection
-						solution = Point((edge_source - hold_source).dot(hold_vector), (edge_source - hold_source).dot(edge_vector))
+						solution = Point((edge_source - hold_source).dot(hold_vector), -(edge_source - hold_source).dot(edge_vector))
 						# discard if the solution is not, in fact, an intersection
-						if hold_source + solution.x * hold_vector != edge_source + solution.x * edge_vector:
+						if solution.x <= 0 or solution.y < 0 or hold_source + solution.x * hold_vector != edge_source + solution.y * edge_vector:
 							continue
 						# add to the distance
 						distance += solution.x
@@ -407,6 +407,9 @@ class Climber:
 						surface = candidates[0]
 						# move on to the next wall
 						break
+					else:
+						print("I DON'T KNOW WHAT'S GOING ON!!!")
+						exit()
 				# this is the wall with the ending hold
 				distance += (h2.real_coords() - source).length()
 				distances[(i, j)] = distance
@@ -474,7 +477,6 @@ if __name__ == "__main__":
 			prob.add_hold(*hold)
 	climber = Climber()
 	climber.climb(prob)
-	exit()
 
 	viewer = IsometricViewer(800, 600)
 	viewer.add_drawable(prob)
