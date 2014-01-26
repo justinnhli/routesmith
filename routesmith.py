@@ -143,6 +143,8 @@ class IsometricViewer:
 		self.reset_viewport()
 		self.init_gui()
 		self.drawables = []
+		self.items = {}
+		self.text = ""
 	def reset_viewport(self):
 		self.theta = (math.pi / 4)
 		self.phi = -(math.pi / 16)
@@ -164,6 +166,8 @@ class IsometricViewer:
 		self.canvas.bind("<Shift-Left>", self._callback_commandline_shift_left)
 		self.canvas.bind("<Shift-Right>", self._callback_commandline_shift_right)
 		self.canvas.bind("<Shift-Return>", self._callback_commandline_shift_return)
+		self.canvas.bind("<Button-1>", self._callback_button_1)
+		self.canvas.bind("<B1-Motion>", self._callback_button_1_motion)
 	def add_drawable(self, drawable):
 		assert isinstance(drawable, Drawable)
 		self.drawables.append(drawable)
@@ -176,32 +180,36 @@ class IsometricViewer:
 			self.theta -= 2 * math.pi
 		elif self.theta < 0:
 			self.theta += 2 * math.pi
-		self.phi += phi
-		if self.phi > math.pi / 2:
-			self.theta = -self.theta
-			self.phi = (math.pi / 2) - self.phi;
-		elif self.theta < 0:
-			self.theta = -self.theta
-			self.phi -= math.pi / 2;
+		if -math.pi / 2 <= self.phi + phi <= math.pi / 2:
+			self.phi += phi
+	def camera_coords(self):
+		return Point(math.sin(self.theta) * math.cos(math.pi - self.phi), math.sin(self.theta) * math.sin(math.pi - self.phi), math.cos(self.theta))
 	def clear(self):
-		self.canvas.create_rectangle(0, 0, self.width + 10, self.height + 10, fill="white")
-	def draw_line(self, p1, p2, **kargs):
+		for item in self.items:
+			self.canvas.delete(item)
+	def draw_line(self, owner, p1, p2, **kargs):
 		assert isinstance(p1, Point)
 		assert isinstance(p2, Point)
 		p1 = self.project(p1)
 		p2 = self.project(p2)
-		self.canvas.create_line(p1.x, p1.y, p2.x, p2.y, **kargs)
-	def draw_circle(self, p, r, **kargs):
+		item = self.canvas.create_line(p1.x, p1.y, p2.x, p2.y, **kargs)
+		self.items[item] = owner
+		return item
+	def draw_circle(self, owner, p, r, **kargs):
 		assert isinstance(p, Point)
 		p = self.project(p)
-		self.canvas.create_oval(p.x - r, p.y - r, p.x + r, p.y + r, **kargs)
-	def draw_polygon(self, pts, **kargs):
+		item = self.canvas.create_oval(p.x - r, p.y - r, p.x + r, p.y + r, **kargs)
+		self.items[item] = owner
+		return item
+	def draw_polygon(self, owner, pts, **kargs):
 		assert all(isinstance(p, Point) for p in pts)
 		args = []
 		for p in pts:
 			p = self.project(p)
 			args.extend((p.x, p.y))
-		self.canvas.create_polygon(*args, **kargs)
+		item = self.canvas.create_polygon(*args, **kargs)
+		self.items[item] = owner
+		return item
 	def draw_wireframe(self):
 		for drawable in self.drawables:
 			drawable.draw_wireframe(self)
@@ -210,6 +218,13 @@ class IsometricViewer:
 			drawable.draw(self)
 	def update(self):
 		self.clear()
+		header = [
+				"(theta, phi): ({:.3f}, {:.3f})".format(self.theta, self.phi),
+				"(x, y, z): {}".format(self.camera_coords()),
+				]
+		text = "\n".join(header) + "\n\n" + self.text
+		item = self.canvas.create_text((10, 10), anchor="nw", text=text)
+		self.items[item] = None
 		if self.wireframe:
 			self.draw_wireframe()
 		else:
@@ -217,39 +232,50 @@ class IsometricViewer:
 	def display(self):
 		self.update()
 		mainloop()
-	def _callback_commandline_up(self, *args):
+	def _callback_commandline_up(self, event):
 		self.move_camera(0, -math.pi / 16)
 		self.update()
-	def _callback_commandline_down(self, *args):
+	def _callback_commandline_down(self, event):
 		self.move_camera(0, math.pi / 16)
 		self.update()
-	def _callback_commandline_left(self, *args):
+	def _callback_commandline_left(self, event):
 		self.move_camera(-math.pi / 16, 0)
 		self.update()
-	def _callback_commandline_right(self, *args):
+	def _callback_commandline_right(self, event):
 		self.move_camera(math.pi / 16, 0)
 		self.update()
-	def _callback_commandline_equal(self, *args):
+	def _callback_commandline_equal(self, event):
 		self.scale *= 1.2
 		self.update()
-	def _callback_commandline_minus(self, *args):
+	def _callback_commandline_minus(self, event):
 		self.scale /= 1.2
 		self.update()
-	def _callback_commandline_shift_up(self, *args):
+	def _callback_commandline_shift_up(self, event):
 		self.y_offset -= 10
 		self.update()
-	def _callback_commandline_shift_down(self, *args):
+	def _callback_commandline_shift_down(self, event):
 		self.y_offset += 10
 		self.update()
-	def _callback_commandline_shift_left(self, *args):
+	def _callback_commandline_shift_left(self, event):
 		self.x_offset -= 10
 		self.update()
-	def _callback_commandline_shift_right(self, *args):
+	def _callback_commandline_shift_right(self, event):
 		self.x_offset += 10
 		self.update()
-	def _callback_commandline_shift_return(self, *args):
+	def _callback_commandline_shift_return(self, event):
 		self.reset_viewport()
 		self.update()
+	def _callback_button_1(self, event):
+		text = []
+		text.append("coords: ({}, {})".format(event.x, event.y))
+		closest = self.canvas.find_closest(event.x, event.y)[0]
+		if closest in self.items and self.items[closest] is not None:
+			text.append(self.items[closest].clicked(self, closest))
+		self.text = "\n".join(text)
+		self.update()
+	def _callback_button_1_motion(self, event):
+		# TODO drag rotation
+		pass
 
 # CLIMBING CLASSES
 
@@ -261,15 +287,25 @@ class Wall(Drawable):
 				(max(p.y for p in points) + min(p.y for p in points)) / 2,
 				(max(p.z for p in points) + min(p.z for p in points)) / 2)
 		self.points = tuple(p - center for p in points)
-		self.surfaces = []
-		for surface in surfaces:
-			self.surfaces.append(Surface(self.points[i] for i in surface))
+		self.surfaces = [Surface(self.points[i] for i in surface) for surface in surfaces]
+		self.canvas_items = {}
+	def canvas_cleared(self):
+		self.canvas.clear()
 	def draw_wireframe(self, viewer, **kargs):
-		for surface in self.surfaces:
-			viewer.draw_polygon(surface.points, outline="#000000", fill="", **kargs)
+		for index, surface in enumerate(self.surfaces):
+			item = viewer.draw_polygon(self, surface.points, outline="#000000", fill="", **kargs)
+			self.canvas_items[item] = index
 	def draw(self, viewer, **kargs):
 		for index, surface in enumerate(self.surfaces):
-			 viewer.draw_polygon(self, surface.points, outline="#000000", fill="#AAAAAA", activefill="#CCCCCC", **kargs)
+			if surface.normal.dot(viewer.camera_coords()) > 0:
+				item = viewer.draw_polygon(self, surface.points, outline="#000000", fill="#AAAAAA", activefill="#CCCCCC", **kargs)
+				self.canvas_items[item] = index
+	def clicked(self, viewer, item):
+		text = []
+		text.append("wall surface #{}".format(self.canvas_items[item]))
+		surface = self.surfaces[self.canvas_items[item]]
+		return "\n".join(text)
+
 
 class Hold(Drawable):
 	def __init__(self, surface, x, y):
@@ -277,10 +313,15 @@ class Hold(Drawable):
 		self.position = Point(x, y)
 	def real_coords(self):
 		return self.surface.pos2coord(self.position)
+	def canvas_cleared(self):
+		pass
 	def draw_wireframe(self, viewer, **kargs):
-		viewer.draw_circle(self.real_coords(), 5, **kargs)
-	def draw(self, viewer, **kargs):
 		viewer.draw_circle(self, self.real_coords(), 5, **kargs)
+	def draw(self, viewer, **kargs):
+		if self.surface.normal.dot(viewer.camera_coords()) > 0:
+			viewer.draw_circle(self, self.real_coords(), 5, **kargs)
+	def clicked(self, viewer, item):
+		return "hold"
 
 class Problem(Drawable):
 	def __init__(self, wall, holds=None, start_holds=None, finish_holds=None):
@@ -294,7 +335,7 @@ class Problem(Drawable):
 		self.start_holds.append(index)
 	def add_finish_hold(self, index):
 		self.finish_holds.append(index)
-	def draw_wireframe(self, viewer):
+	def draw_wireframe(self, viewer, **kargs):
 		self.wall.draw_wireframe(viewer)
 		for index, hold in enumerate(self.holds):
 			if index in self.start_holds:
