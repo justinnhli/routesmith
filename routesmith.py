@@ -5,8 +5,7 @@ from abc import ABCMeta, abstractmethod
 from collections import Counter, deque
 from copy import copy
 from numbers import Real
-from os import chdir as cd
-from os.path import basename, dirname, expanduser, join as join_path, realpath
+from os.path import dirname, expanduser, join as join_path, realpath
 from sys import argv
 
 from tkinter import Canvas, Tk, mainloop
@@ -35,7 +34,7 @@ class Point:
 	def __eq__(self, other):
 		return all(x == y for x, y in zip(self.values, other.values))
 	def __ne__(self, other):
-		return not (self == other)
+		return not self == other
 	def __hash__(self):
 		return hash(self.values)
 	def __str__(self):
@@ -140,11 +139,11 @@ class IsometricViewer:
 		self.width = width
 		self.height = height
 		self.wireframe = True
-		self.reset_viewport()
-		self.init_gui()
 		self.drawables = []
 		self.items = {}
 		self.text = ""
+		self.reset_viewport()
+		self.init_gui()
 	def reset_viewport(self):
 		self.theta = (math.pi / 4)
 		self.phi = -(math.pi / 16)
@@ -291,7 +290,7 @@ class Wall(Drawable):
 		self.surfaces = [Surface(self.points[i] for i in surface) for surface in surfaces]
 		self.canvas_items = {}
 	def canvas_cleared(self):
-		self.canvas.clear()
+		self.canvas_items.clear()
 	def draw_wireframe(self, viewer, **kargs):
 		for index, surface in enumerate(self.surfaces):
 			item = viewer.draw_polygon(self, surface.points, outline="#000000", fill="", **kargs)
@@ -369,7 +368,6 @@ class Climber:
 		self.armspan = 175
 	def climb(self, problem):
 		distances = self.create_graph(problem)
-		pass
 	def create_graph(self, problem):
 		distances = {}
 		for i in range(len(problem.holds)):
