@@ -32,7 +32,7 @@ class Point():
 	def z(self):
 		return self.values[2]
 	def __eq__(self, other):
-		return hash(self) == hash(other)
+		return all(x == y for x, y in zip(self.values, other.values))
 	def __ne__(self, other):
 		return not (self == other)
 	def __hash__(self):
