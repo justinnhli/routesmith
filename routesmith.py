@@ -88,6 +88,9 @@ class Drawable(metaclass=ABCMeta):
 	@abstractmethod
 	def draw_wireframe(self):
 		raise NotImplementedError()
+	@abstractmethod
+	def draw(self):
+		raise NotImplementedError()
 
 # MODELING CLASSES
 
@@ -202,6 +205,9 @@ class IsometricViewer:
 	def draw_wireframe(self):
 		for drawable in self.drawables:
 			drawable.draw_wireframe(self)
+	def draw(self):
+		for drawable in self.drawables:
+			drawable.draw(self)
 	def update(self):
 		self.clear()
 		if self.wireframe:
@@ -261,6 +267,9 @@ class Wall(Drawable):
 	def draw_wireframe(self, viewer, **kargs):
 		for surface in self.surfaces:
 			viewer.draw_polygon(surface.points, outline="#000000", fill="", **kargs)
+	def draw(self, viewer, **kargs):
+		for index, surface in enumerate(self.surfaces):
+			 viewer.draw_polygon(self, surface.points, outline="#000000", fill="#AAAAAA", activefill="#CCCCCC", **kargs)
 
 class Hold(Drawable):
 	def __init__(self, surface, x, y):
@@ -270,6 +279,8 @@ class Hold(Drawable):
 		return self.surface.pos2coord(self.position)
 	def draw_wireframe(self, viewer, **kargs):
 		viewer.draw_circle(self.real_coords(), 5, **kargs)
+	def draw(self, viewer, **kargs):
+		viewer.draw_circle(self, self.real_coords(), 5, **kargs)
 
 class Problem(Drawable):
 	def __init__(self, wall, holds=None, start_holds=None, finish_holds=None):
@@ -292,6 +303,15 @@ class Problem(Drawable):
 				hold.draw_wireframe(viewer, fill="#00FF00")
 			else:
 				hold.draw_wireframe(viewer, fill="#0000FF")
+	def draw(self, viewer, **kargs):
+		self.wall.draw(viewer)
+		for index, hold in enumerate(self.holds):
+			if index in self.start_holds:
+				hold.draw(viewer, fill="#FF0000")
+			elif index in self.finish_holds:
+				hold.draw(viewer, fill="#00FF00")
+			else:
+				hold.draw(viewer, fill="#0000FF")
 	def create_graph(self):
 		distances = {}
 		for i in range(len(self.holds)):
