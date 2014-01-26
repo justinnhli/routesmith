@@ -183,7 +183,8 @@ class IsometricViewer:
 		if -math.pi / 2 <= self.phi + phi <= math.pi / 2:
 			self.phi += phi
 	def camera_coords(self):
-		return Point(math.sin(self.theta) * math.cos(math.pi - self.phi), math.sin(self.theta) * math.sin(math.pi - self.phi), math.cos(self.theta))
+		phi = math.pi - self.phi
+		return Point(-math.sin(self.theta) * -math.cos(phi), math.sin(phi), math.cos(self.theta) * -math.cos(phi))
 	def clear(self):
 		for item in self.items:
 			self.canvas.delete(item)
