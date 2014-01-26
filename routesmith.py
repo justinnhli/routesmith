@@ -7,6 +7,7 @@ from copy import copy
 from numbers import Real
 from os import chdir as cd
 from os.path import basename, dirname, expanduser, join as join_path, realpath
+from sys import argv
 
 from tkinter import *
 
@@ -366,8 +367,14 @@ def create_problem_from_file(path):
 	finishes = tuple(int(n) for n in sections[3].strip().split())
 	return Problem(wall, holds, starts, finishes)
 
-
 if __name__ == "__main__":
+	if len(argv) == 2:
+		problem = create_problem_from_file(argv[1])
+		viewer = IsometricViewer(800, 600)
+		viewer.add_drawable(problem)
+		viewer.display()
+		exit()
+
 	simple_wall = ((
 					(   0, 180, 0), # 0
 					(   0,   0, 0),
