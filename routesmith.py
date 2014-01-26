@@ -9,7 +9,7 @@ from os import chdir as cd
 from os.path import basename, dirname, expanduser, join as join_path, realpath
 from sys import argv
 
-from tkinter import *
+from tkinter import Canvas, Tk, mainloop
 
 # CONSTANTS
 
