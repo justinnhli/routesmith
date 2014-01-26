@@ -368,13 +368,6 @@ def create_problem_from_file(path):
 	return Problem(wall, holds, starts, finishes)
 
 if __name__ == "__main__":
-	if len(argv) == 2:
-		problem = create_problem_from_file(argv[1])
-		viewer = IsometricViewer(800, 600)
-		viewer.add_drawable(problem)
-		viewer.display()
-		exit()
-
 	simple_wall = ((
 					(   0, 180, 0), # 0
 					(   0,   0, 0),
@@ -400,10 +393,13 @@ if __name__ == "__main__":
 				[],
 				[],
 			))
-	wall = Wall(*simple_wall)
-	prob = Problem(wall)
-	for hold in simple_prob[1][0]:
-		prob.add_hold(*hold)
+	if len(argv) == 2:
+		prob = create_problem_from_file(argv[1])
+	else:
+		prob = Problem(Wall(*simple_wall))
+		for hold in simple_prob[1][0]:
+			prob.add_hold(*hold)
+
 	viewer = IsometricViewer(800, 600)
 	viewer.add_drawable(prob)
 	prob.create_graph()
