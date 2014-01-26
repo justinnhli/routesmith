@@ -17,7 +17,7 @@ TOLERANCE = 0.0005
 
 # ABSTRACT CLASSES
 
-class Point():
+class Point:
 	def __init__(self, *dimensions):
 		self.values = tuple(0 if abs(i) < TOLERANCE else i for i in dimensions)
 	@property
@@ -307,7 +307,6 @@ class Wall(Drawable):
 		surface = self.surfaces[self.canvas_items[item]]
 		return "\n".join(text)
 
-
 class Hold(Drawable):
 	def __init__(self, surface, x, y):
 		self.surface = surface
@@ -354,55 +353,60 @@ class Problem(Drawable):
 				hold.draw(viewer, fill="#00FF00")
 			else:
 				hold.draw(viewer, fill="#0000FF")
-	def create_graph(self):
+
+# CLIMBER CLASSES
+
+class Climber:
+	def __init__(self):
+		self.height = 175
+		self.armspan = 175
+	def climb(self, problem):
+		distances = self.create_graph(problem)
+		pass
+	def create_graph(self, problem):
 		distances = {}
-		for i in range(len(self.holds)):
-			for j in range(i+1, len(self.holds)):
-				h1 = self.holds[i]
-				h2 = self.holds[j]
+		for i in range(len(problem.holds)):
+			for j in range(i+1, len(problem.holds)):
+				h1 = problem.holds[i]
+				h2 = problem.holds[j]
 				vector = h2.real_coords() - h1.real_coords()
-				# figure out if the wall between is convex or concave
-				if vector.angle(h1.surface.normal) <= math.pi / 2:
-					# it's not a bulge; distance is simply straight line distance
-					# FIXME technically, a bulge could appear *between* the holds
-					distances[(i, j)] = vector.length()
-				else:
-					# it's a bulge; need to calculate wall distance
-					surface = h1.surface
-					source = h1.real_coords()
-					distance = 0
-					done = False
-					while not done:
-						# project vector onto wall
-						projection = surface.project(vector)
-						hold_source = surface.coord2pos(source)
-						hold_vector = (surface.coord2pos(surface.project(source + projection)) - hold_source).normalize()
-						# find the edge that this projection crosses
-						rotated_points = copy(surface.points)
-						rotated_points.rotate(-1)
-						for p1, p2 in zip(surface.points, rotated_points):
-							# find where the edge and the projection intersects
-							edge_source = surface.coord2pos(p1)
-							edge_vector = (surface.coord2pos(p2) - edge_source).normalize()
-							# frame the system of equations as a projection
-							solution = Point((edge_source - hold_source).dot(hold_vector), (edge_source - hold_source).dot(edge_vector))
-							# discard if the solution is not, in fact, an intersection
-							if hold_source + solution.x * hold_vector != edge_source + solution.x * edge_vector:
-								continue
-							# add to the distance
-							distance += solution.x
-							# find the next wall
-							candidates = [s for s in self.wall.surfaces if s != surface and p1 in s.points and p2 in s.points]
-							assert len(candidates) == 1
-							source = surface.pos2coord(hold_source + solution.x * hold_vector)
-							surface = candidates[0]
-							# move on to the next wall
-							break
-						else:
-							# this is the wall with the ending hold
-							distance += (h2.real_coords() - source).length()
-							distances[(i, j)] = distance
-							done = True
+				# FIXME we don't want to count dimples between two holds
+				surface = h1.surface
+				source = h1.real_coords()
+				distance = 0
+				while surface != h2.surface:
+					# project vector onto wall
+					projection = surface.project(vector)
+					hold_source = surface.coord2pos(source)
+					hold_vector = (surface.coord2pos(surface.project(source + projection)) - hold_source).normalize()
+					# find the edge that this projection crosses
+					rotated_points = copy(surface.points)
+					rotated_points.rotate(-1)
+					for p1, p2 in zip(surface.points, rotated_points):
+						# find where the edge and the projection intersects
+						edge_source = surface.coord2pos(p1)
+						edge_vector = (surface.coord2pos(p2) - edge_source).normalize()
+						# frame the system of equations as a projection
+						solution = Point((edge_source - hold_source).dot(hold_vector), (edge_source - hold_source).dot(edge_vector))
+						# discard if the solution is not, in fact, an intersection
+						if hold_source + solution.x * hold_vector != edge_source + solution.x * edge_vector:
+							continue
+						# add to the distance
+						distance += solution.x
+						# find the next wall
+						candidates = [s for s in problem.wall.surfaces if s != surface and p1 in s.points and p2 in s.points]
+						assert len(candidates) == 1
+						source = surface.pos2coord(hold_source + solution.x * hold_vector)
+						surface = candidates[0]
+						# move on to the next wall
+						break
+				# this is the wall with the ending hold
+				distance += (h2.real_coords() - source).length()
+				distances[(i, j)] = distance
+				distances[(j, i)] = distance
+		return distances
+
+# MAIN
 
 def create_wall_from_file(path):
 	sections = []
@@ -461,8 +465,10 @@ if __name__ == "__main__":
 		prob = Problem(Wall(*simple_wall))
 		for hold in simple_prob[1][0]:
 			prob.add_hold(*hold)
+	climber = Climber()
+	climber.climb(prob)
+	exit()
 
 	viewer = IsometricViewer(800, 600)
 	viewer.add_drawable(prob)
-	prob.create_graph()
 	viewer.display()
