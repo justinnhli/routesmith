@@ -12,7 +12,6 @@ effort required to match on the hold
 effort required to hang in direction of pull
 forgiveness for overshooting
 
-
 how do pinches, which can be used in multiple directions, fit into this framework?
 there may be multiple directionals and variances
 note that you can pull down on a pinch - the multiple directionality thing doesn't help there
@@ -29,9 +28,84 @@ imagine in between, the wall bends to either be an arete, a face, or a dihedral
 
 or would be ideal if I don't have to do any physics simulations
 
-project goals
-generate random bouldering caves given room dimensions
-generate random bouldering problems given wall and difficulty (and maybe movement)
-assess the difficulty of a bouldering problem
-solve a bouldering problem
-create climbing animations
+climbing terms:
+	problems
+		Sit start: Starting a climb from a position in which the climber is sitting on the floor. This is common in climbing gyms in order to fit an extra move into the climb. Noted as SS or SDS in some topo guides.
+		Track: To use holds specified out for you in any route, usually used in gym climbing.
+		Traverse: A section of a route that requires progress in a horizontal direction.
+		Yabo: Another name for a Sit start, a 'Yabo start' was named after John 'Yabo' Yablonski.[5]
+	movement
+		Barn-door: If a climber has only two points of contact using either the right or left side of their body, the other half may swing uncontrollably out from the wall like a door on a hinge.
+		Bump: To quickly move up a hand or a foot a small distance from one useful hold to another.
+		Campus: The act of climbing without using any feet.
+		Deadpoint: A dynamic climbing technique in which the hold is grabbed at the apex of upward motion. This technique places minimal strain on both the hold and the arms.
+		Dyno: A dynamic move to grab a hold that would otherwise be out of reach. Generally both feet will leave the rock face and return again once the target hold is caught. Non-climbers would call it a jump or a leap.
+		Figure four: Advanced climbing technique where the climber hooks a leg over the opposite arm, and then pushes down with this leg to achieve a greater vertical reach. Requires strength and a solid handhold.
+		Flagging: Climbing technique where a leg is held in a position to maintain balance, rather than to support weight. Often useful to prevent barn-dooring. There are three types of flagging:
+			Normal flag: Where the flagging foot stays on the same side (e.g. flagging with the right foot out to the right side of the body)
+			Reverse inside flag: Where the flagging foot is crossed in front of the foot that is on a foot hold
+			Reverse outside flag: Where the flagging foot is crossed behind the foot that is on a foot hold
+		Gaston: A climbing grip using one hand with the thumb down and elbow out. The grip maintains friction against a hold by pressing outward toward the elbow.
+		Egyptian: Method for reducing muscle strain in arms when holding a side grip. One knee ends up in a lower position with the body twisted towards the other leg. It can give a longer reach as the body and shoulders twist towards a hold.
+		Egyptian bridging: The same position as bridging or chimneying, but with one leg in front and one behind the body.
+		Hand traverse: Traversing without any definitive footholds, i.e. smearing or heelhooking.
+		Knee Drop: See Egyptian.
+		Liebacking: Climbing a vertical edge by side-pulling the edge with both hands and relying on friction or very small holds for the feet.
+		Lock-off: Using tendon strength to support weight on a hand hold without tiring muscles too much.
+		Mantel (abbreviation of 'mantleshelf'): A move used to surmount a ledge or feature in the rock in the absence of any useful holds directly above. It involves pushing down on a ledge or feature instead of pulling down. In ice climbing, a mantel is done by moving the hands from the shaft to the top of the ice tool and pushing down on the head of the tool.
+		No-hand rest: An entirely leg-supported resting position during climbing that does not require hands on the rock.
+		Pied a main: A movement where the foot is placed on the same hold as the hand.
+		Picknick stop: A No-hand rest.
+		Rest step: Energy-saving technique where unweighted (uphill) leg is rested between each forward step, sometimes by "locking" knee of rear leg.
+		Side pull: A hold that needs to be gripped with a sideways pull towards the body.
+		Smearing: To use friction on the sole of the climbing shoe, in the absence of any useful footholds.
+		Stem: Climbing using two faces that are at an angle less than 180 degrees to each other.
+		Swinging-lieback: A dynamic form of the lieback described above, rotating off one foot while maintaining a grip with that hand, then grabbing a high handhold at the deadpoint of the swing. This move is frequently reversible, unlike more aerial dynos.
+	hold shape
+		Arete: A method of indoor climbing, in which one is able to use such a corner as a hold. See also dihedral.
+		Bidoigt: (French "two fingers") A climbing hold, typically a pocket or hueco, that has enough room for two fingers. See also mono.
+		Bucket: A large handhold.
+		Chimney: A rock cleft with vertical sides mostly parallel, large enough to fit the climber's body into. To climb such a structure, the climber often uses his head, back and feet to apply opposite pressure on the vertical walls.
+		Corner: An inside corner of rock, the opposite to an arete (UK). See Dihedral.
+		Crimp: A hold which is only just big enough to be grasped with the tips of the fingers.
+		Dihedral: An inside corner of rock, with more than a 90-degree angle between the faces. See also corner and arete.
+		Edge: A thin ledge on the rock.
+		Flake: A thin slab of rock detached from the main face.
+		Horn: Large, pointed protrusion of rock that can be slung. Typically also makes a good hand hold. Known in the UK as a "Spike". See bollard, chicken head.
+		Hueco: (Spanish hueco "hole") A climbing hold consisting of a pocket in the rock, typically round and deep and featuring a positive lip. Huecos vary in size from accommodating a single finger (this is also called a "mono") to large enough to fit one's entire body. The term hueco entered the jargon of rock climbers from the Texas climbing area Hueco Tanks that is famous for this sort of hold.
+		Jib: A particularly small foot hold, usually only large enough for the big toe, sometimes relying heavily on friction to support weight.
+		Jug: A shortened term for Jug Hold, both noun and verb.
+		Jug hold: A large, easily held hold. Also known simply as a jug.
+		Low-Angle: A face climb that is less than vertical; the opposite of an overhang or roof. The same as "slab".
+		Mono: (French monodoigt "single finger") A climbing hold, typically a pocket or hueco, that only has enough room for one finger.
+		Nub: A little hold that only a few fingers can grip, or the tips of the toes.
+		Off-width: A crack that is too wide for effective hand or foot jams, but is not as large as a chimney.
+		Open book: An inside angle in the rock. See also dihedral.
+		Overhang: A section of rock or ice that is angled beyond vertical. See roof.
+		Pinch Hold: This is a hold where you must pinch it to hold on. They come in various sizes.
+		Positive: A hold or part of a hold, having a surface facing upwards, or away from the direction it is pulled, facilitating use.
+		Roof: Horizontal overhang.
+		Slab: A relatively low-angle (significantly less than vertical) section of rock, usually with few large features. Requires slab climbing techniques.
+		Sloper: A sloping hold with very little positive surface. A sloper is comparable to palming a basketball.
+		Volume: A large, hollow bolted-on bouldering hold.
+	hold usage
+		Alpine knee: To use your knee as a way to gain ground on a climb.
+		Arm bar: Jamming an arm into a crack and locking it into place.
+		Bicycle: A technique used to keep the feet on when climbing on overhangs. One foot is placed on a foothold and the other foot is placed behind the foothold in a toe hook position. The climber can now squeeze the hold between the feet.
+		Chest jam: Jamming the torso into a wide crack, for resting.
+		Chicken Wing: This is a crack climbing technique. A hand is placed on one side of the crack and the shoulder on the other.
+		Chimney: The process of using such a technique (chimneying).
+		Crimp: The process of holding onto a crimp.
+		Edging: Using the edge of the climbing shoe on a foothold. In the absence of footholds, smearing is used.
+		Fist jam: A type of jam using the hand. See climbing technique.
+		Foot jam: Also known as the heel-to-toe jam. It involves jamming the foot into a larger crack by twisting the foot into place, the contact with the crack being on the heel and toes.
+		Hamster: The act of pulling oneself up with both arms parallel in front of your chest. Resembles a Hamster during feeding. Eg. That sloper required some hamstering to get to the next move.
+		Handjam: Making progress by inserting the hand (usually vertically with the thumb uppermost) into a crack and then pushing the thumb downwards towards the palm. This expands the hand and can make a highly secure placement. In the UK this move was credited with facilitating the advances in free climbing in the late 1940s and 50s made by climbers such as Joe Brown (climber) and Don Whillans although they did not invent it.'
+		Heel hook: Using the back of the heel to apply pressure to a hold, for balance or leverage; this technique requires pulling with the heel of a foot by flexing the hamstring. This technique is notable since in most forms of climbing one uses the toes to push.
+		Hook: A climbing technique involving hooking a heel or toe against a hold in order to balance or to provide additional support.
+		Jamming: Wedging a body part into a crack.
+		Match: To use one hold for two limbs, or to swap limbs on a particular hold.
+		Sprag: A type of hand position where the fingers and thumb are opposed.
+		Tendu: (from the French word meaning outstretched) In this grip the fingers are close to the position when the hand is open. The relative angle between the finger bones is gradual. The load applied is coming from tension in the forearm muscles.
+		Toe hook: A toe hook is securing the upper side of the toes on a hold. It helps pull the body inwards-towards the wall. The toe hook is often used on overhanging rock where it helps to keep the body from swinging away from the wall.
+		Undercling: A hold which is gripped with the palm of the hand facing upwards
