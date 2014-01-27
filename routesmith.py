@@ -2,11 +2,11 @@
 
 import math
 from abc import ABCMeta, abstractmethod
+from argparse import ArgumentParser
 from collections import Counter, deque
 from copy import copy
 from numbers import Real
 from os.path import dirname, expanduser, join as join_path, realpath
-from sys import argv
 
 from tkinter import Canvas, Tk, mainloop
 
@@ -442,37 +442,11 @@ def create_problem_from_file(path):
 	return Problem(wall, holds, starts, finishes)
 
 if __name__ == "__main__":
-	simple_wall = ((
-					(   0, 180, 0), # 0
-					(   0,   0, 0),
-					( 180,   0, 0),
-					( 180, 180, 0),
-					( 180,   0, 180),
-					( 180, 180, 180), # 5
-					( 360,   0, 180),
-					( 360, 180, 180),
-			), (
-					(0, 1, 2, 3),
-					(3, 2, 4, 5),
-					(5, 4, 6, 7),
-			))
-	simple_prob = (
-			simple_wall,
-			(
-				(
-					(0,  90,  90),
-					(1,  90,  90),
-					(2,  90,  90),
-				),
-				[],
-				[],
-			))
-	if len(argv) == 2:
-		prob = create_problem_from_file(argv[1])
-	else:
-		prob = Problem(Wall(*simple_wall))
-		for hold in simple_prob[1][0]:
-			prob.add_hold(*hold)
+	arg_parser = ArgumentParser()
+	arg_parser.add_argument("problem", nargs=1, help="problem file")
+	args = arg_parser.parse_args()
+
+	prob = create_problem_from_file(args.problem[0])
 	climber = Climber()
 	climber.climb(prob)
 
