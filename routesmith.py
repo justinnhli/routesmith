@@ -38,7 +38,7 @@ class Point:
 	def __hash__(self):
 		return hash(self.values)
 	def __str__(self):
-		return "(" + ", ".join("{}".format(i) for i in self.values) + ")"
+		return "(" + ", ".join(format(i, ".3f") for i in self.values) + ")"
 	def __add__(self, p):
 		assert isinstance(p, Point) and self.dimensions == p.dimensions
 		return Point(*(i + j for i, j in zip(self.values, p.values)))
@@ -67,14 +67,9 @@ class Point:
 		cos_theta = math.cos(theta)
 		sin_phi = math.sin(phi)
 		cos_phi = math.cos(phi)
-		x = self.x * cos_theta + self.z * sin_theta
-		y = self.x * sin_theta * sin_phi
-		y += self.y * cos_phi
-		y -= self.z * cos_theta * sin_phi
-		z = -self.x * sin_theta * cos_phi
-		z += self.y * sin_theta
-		z += self.z * cos_theta * cos_phi
-		return Point(x, y, z)
+		p = Point(self.x * cos_theta + self.y * -sin_theta, self.x * sin_theta + self.y * cos_theta, self.z)
+		p = Point(p.x * cos_phi + p.z * sin_phi, p.y, p.x * -sin_phi + p.z * cos_phi)
+		return p
 	def clone(self):
 		return Point(*self.values)
 	def length(self):
@@ -106,17 +101,16 @@ class Surface:
 		assert all(abs(p.dot(self.normal) - self.constant) < TOLERANCE for p in self.points), "Vertices are not planar"
 		# use the first point as a temporary origin
 		self.origin = self.points[0]
-		# define the first basis
-		if abs(self.normal.y) == 1:
-			# if the surface is horizontal, use the plane along z=0
-			self.basis_x = Point(self.normal.y, -self.normal.x, 0).normalize()
+		# define the first basis, depending on whether the surface is horizontal
+		if abs(self.normal.z) == 1:
+			self.basis_x = Point(0, self.normal.z, -self.normal.x).normalize()
+			if self.normal.cross(self.basis_x).x < 0:
+				self.basis_x = -self.basis_x
 		else:
-			# otherwise, use the plane along y=0
-			self.basis_x = Point(self.normal.z, 0, -self.normal.x).normalize()
+			self.basis_x = Point(self.normal.y, -self.normal.x, 0).normalize()
+			if self.normal.cross(self.basis_x).z < 0:
+				self.basis_x = -self.basis_x
 		self.basis_y = self.normal.cross(self.basis_x)
-		if self.basis_y.y < 0:
-			self.basis_x = -self.basis_x
-			self.basis_y = -self.basis_y
 		# find the lowest transformed coordinates for each basis
 		min_x = min((self.points[i] - self.origin).dot(self.basis_x) for i in range(len(self.points)))
 		min_y = min((self.points[i] - self.origin).dot(self.basis_y) for i in range(len(self.points)))
@@ -145,8 +139,8 @@ class IsometricViewer:
 		self.reset_viewport()
 		self.init_gui()
 	def reset_viewport(self):
-		self.theta = (math.pi / 4)
-		self.phi = -(math.pi / 16)
+		self.theta = math.pi / 8
+		self.phi = math.pi / 16
 		self.scale = 1
 		self.x_offset = self.width / 2
 		self.y_offset = self.height / 2
@@ -172,7 +166,7 @@ class IsometricViewer:
 		self.drawables.append(drawable)
 	def project(self, point):
 		projected = point.rotate(self.theta, self.phi)
-		return Point(projected.x * self.scale + self.x_offset, -projected.y * self.scale + self.y_offset)
+		return Point(projected.y * self.scale + self.x_offset, -projected.z * self.scale + self.y_offset)
 	def move_camera(self, theta, phi):
 		self.theta += theta
 		if self.theta > 2 * math.pi:
@@ -182,8 +176,7 @@ class IsometricViewer:
 		if -math.pi / 2 <= self.phi + phi <= math.pi / 2:
 			self.phi += phi
 	def camera_coords(self):
-		phi = math.pi - self.phi
-		return Point(-math.sin(self.theta) * -math.cos(phi), math.sin(phi), math.cos(self.theta) * -math.cos(phi))
+		return Point(math.cos(self.theta) * math.cos(self.phi), -math.sin(self.theta) * math.cos(self.phi), math.sin(self.phi))
 	def clear(self):
 		for item in self.items:
 			self.canvas.delete(item)
@@ -233,16 +226,16 @@ class IsometricViewer:
 		self.update()
 		mainloop()
 	def _callback_commandline_up(self, event):
-		self.move_camera(0, -math.pi / 16)
-		self.update()
-	def _callback_commandline_down(self, event):
 		self.move_camera(0, math.pi / 16)
 		self.update()
+	def _callback_commandline_down(self, event):
+		self.move_camera(0, -math.pi / 16)
+		self.update()
 	def _callback_commandline_left(self, event):
-		self.move_camera(-math.pi / 16, 0)
+		self.move_camera(math.pi / 16, 0)
 		self.update()
 	def _callback_commandline_right(self, event):
-		self.move_camera(math.pi / 16, 0)
+		self.move_camera(-math.pi / 16, 0)
 		self.update()
 	def _callback_commandline_equal(self, event):
 		self.scale *= 1.2
@@ -270,7 +263,7 @@ class IsometricViewer:
 		text.append("coords: ({}, {})".format(event.x, event.y))
 		closest = self.canvas.find_closest(event.x, event.y)[0]
 		if closest in self.items and self.items[closest] is not None:
-			text.append(self.items[closest].clicked(self, closest))
+			text.append(self.items[closest].clicked(self, event, closest))
 		self.text = "\n".join(text)
 		self.update()
 	def _callback_button_1_motion(self, event):
@@ -286,6 +279,7 @@ class Wall(Drawable):
 				(max(p.x for p in points) + min(p.x for p in points)) / 2,
 				(max(p.y for p in points) + min(p.y for p in points)) / 2,
 				(max(p.z for p in points) + min(p.z for p in points)) / 2)
+		center = Point(0, 0, 0)
 		self.points = tuple(p - center for p in points)
 		self.surfaces = [Surface(self.points[i] for i in surface) for surface in surfaces]
 		self.canvas_items = {}
@@ -300,10 +294,31 @@ class Wall(Drawable):
 			if surface.normal.dot(viewer.camera_coords()) > 0:
 				item = viewer.draw_polygon(self, surface.points, outline="#000000", fill="#AAAAAA", activefill="#CCCCCC", **kargs)
 				self.canvas_items[item] = index
-	def clicked(self, viewer, item):
+	def clicked(self, viewer, event, item):
 		text = []
 		text.append("wall surface #{}".format(self.canvas_items[item]))
 		surface = self.surfaces[self.canvas_items[item]]
+		text.append("normal: {}".format(surface.normal))
+		text.append("constant: {}".format(surface.constant))
+		text.append("basis1: {}".format(surface.basis_x))
+		text.append("basis2: {}".format(surface.basis_y))
+		text.append("origin: {}".format(surface.origin))
+		unscaled = Point(0, (event.x - viewer.x_offset) / viewer.scale, -(event.y - viewer.y_offset) / viewer.scale)
+		text.append("unscaled: {}".format(unscaled))
+		unrotated = unscaled.rotate(viewer.theta, viewer.phi)
+		unrotated = Point(unrotated.x, unscaled.y / math.cos(viewer.theta), unscaled.z / math.cos(viewer.phi))
+		text.append("unrotated: {}".format(unrotated))
+		unrotated = Point(0, unrotated.y, unrotated.z)
+		intersection = Point(0, 0, 0)
+		if surface.normal.x == 0:
+			# FIXME
+			pass
+		else:
+			intersection = Point((surface.constant - unrotated.dot(surface.normal)) / surface.normal.x, unrotated.y, unrotated.z)
+		text.append("intersection: {}".format(intersection))
+		rotated = intersection.rotate(-viewer.theta, -viewer.phi)
+		text.append("rotated: {}".format(rotated))
+		camera_coords = viewer.camera_coords()
 		return "\n".join(text)
 
 class Hold(Drawable):
@@ -319,7 +334,7 @@ class Hold(Drawable):
 	def draw(self, viewer, **kargs):
 		if self.surface.normal.dot(viewer.camera_coords()) > 0:
 			viewer.draw_circle(self, self.real_coords(), 5, **kargs)
-	def clicked(self, viewer, item):
+	def clicked(self, viewer, event, item):
 		return "hold"
 
 class Problem(Drawable):
