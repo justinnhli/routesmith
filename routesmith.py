@@ -5,6 +5,7 @@ from abc import ABCMeta, abstractmethod
 from argparse import ArgumentParser
 from collections import Counter, deque
 from copy import copy
+from itertools import product
 from numbers import Real
 from os.path import dirname, expanduser, join as join_path, realpath
 
@@ -388,6 +389,24 @@ class Climber:
 		self.armspan = 175
 	def climb(self, problem):
 		distances = Climber.create_graph(problem)
+		poses = self.start_poses(problem)
+	def start_poses(self, problem):
+		start_poses = []
+		hand_holds = [None] + list(problem.start_holds)
+		for left_hand, right_hand in product(hand_holds, repeat=2):
+			if left_hand is None and right_hand is None:
+				continue
+			hand_height = max(problem.holds[hand].real_coords().z for hand in (left_hand, right_hand) if hand is not None)
+			foot_holds = [None] + list(index for index, hold in enumerate(problem.holds) if hold.real_coords().z <= hand_height)
+			for left_foot, right_foot in product(foot_holds, repeat=2):
+				pose = Pose(left_hand, right_hand, left_foot, right_foot)
+				if self.valid_pose(pose):
+					start_poses.append(pose)
+		return start_poses
+	def valid_pose(self, pose):
+		return True
+	def evaluate_pose(self, pose):
+		pass
 	@staticmethod
 	def create_graph(problem):
 		distances = {}
@@ -470,6 +489,7 @@ if __name__ == "__main__":
 	prob = create_problem_from_file(args.problem[0])
 	climber = Climber()
 	climber.climb(prob)
+	exit()
 
 	viewer = IsometricViewer(800, 600)
 	viewer.add_drawable(prob)
