@@ -33,8 +33,6 @@ class Point:
 		return self.values[2]
 	def __eq__(self, other):
 		return all(x == y for x, y in zip(self.values, other.values))
-	def __ne__(self, other):
-		return not self == other
 	def __hash__(self):
 		return hash(self.values)
 	def __str__(self):
@@ -376,14 +374,23 @@ class Pose:
 		self.right_hand = right_hand
 		self.left_foot = left_foot
 		self.right_foot = right_foot
+	def __eq__(self, other):
+		return self.as_tuple() == other.as_tuple()
+	def __hash__(self):
+		return hash(self.as_tuple())
+	def __str__(self):
+		return str(self.as_tuple())
+	def as_tuple(self):
+		return (self.left_hand, self.right_hand, self.left_foot, self.right_foot)
 
 class Climber:
 	def __init__(self):
 		self.height = 175
 		self.armspan = 175
 	def climb(self, problem):
-		distances = self.create_graph(problem)
-	def create_graph(self, problem):
+		distances = Climber.create_graph(problem)
+	@staticmethod
+	def create_graph(problem):
 		distances = {}
 		for i in range(len(problem.holds)):
 			for j in range(i+1, len(problem.holds)):
