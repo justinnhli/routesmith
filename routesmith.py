@@ -31,6 +31,9 @@ class Point:
 	@property
 	def z(self):
 		return self.values[2]
+	@property
+	def length(self):
+		return math.sqrt(sum(i * i for i in self.values))
 	def __eq__(self, other):
 		return all(x == y for x, y in zip(self.values, other.values))
 	def __hash__(self):
@@ -55,10 +58,10 @@ class Point:
 		assert self.dimensions == 3 and isinstance(p, Point) and p.dimensions == 3
 		return Point(self.y * p.z - self.z * p.y, self.z * p.x - self.x * p.z, self.x * p.y - self.y * p.x)
 	def angle(self, p):
-		return math.acos(self.dot(p) / (self.length() * p.length()))
+		return math.acos(self.dot(p) / (self.length * p.length))
 	def project(self, p):
 		assert isinstance(p, Point) and self.dimensions == p.dimensions
-		return self - (self.dot(p) / p.length()) * p
+		return self - (self.dot(p) / p.length) * p
 	def rotate(self, theta, phi):
 		assert self.dimensions == 3
 		sin_theta = math.sin(theta)
@@ -68,12 +71,8 @@ class Point:
 		p = Point(self.x * cos_theta + self.y * -sin_theta, self.x * sin_theta + self.y * cos_theta, self.z)
 		p = Point(p.x * cos_phi + p.z * sin_phi, p.y, p.x * -sin_phi + p.z * cos_phi)
 		return p
-	def clone(self):
-		return Point(*self.values)
-	def length(self):
-		return math.sqrt(sum(i * i for i in self.values))
 	def normalize(self):
-		l = self.length()
+		l = self.length
 		return Point(*(i / l for i in self.values))
 
 class Drawable(metaclass=ABCMeta):
@@ -431,7 +430,7 @@ class Climber:
 						print("I DON'T KNOW WHAT'S GOING ON!!!")
 						exit()
 				# this is the wall with the ending hold
-				distance += (h2.real_coords() - source).length()
+				distance += (h2.real_coords() - source).length
 				distances[(i, j)] = distance
 				distances[(j, i)] = distance
 		return distances
