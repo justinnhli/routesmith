@@ -1,32 +1,39 @@
-focus on just positioning for now
+straight line distance to average of finish holds as heuristic
+	alternately, something like number of edges on a nearest neighbor graph
+both hands must be on the wall at all times
+use binary search on surface to find location of click
+	may or may not work, since x and y on plane may affect both x and y on screen
 
-focus on just three attributes for now
-width
-depth
-orientation
+hold properties
+	stage 1
+		position
+	stage 2
+		width
+		depth
+		orientation
+	stage 3
+		pull direction along the wall
+		directionality variance on the plane of the wall
+		effort required to hang on the hold perpendicular to the wall
+		effort required to match on the hold
+		effort required to hang in direction of pull
+		forgiveness for overshooting
+	problems
+		how do pinches, which can be used in multiple directions, fit into this framework?
+		there may be multiple directionals and variances
+		note that you can pull down on a pinch - the multiple directionality thing doesn't help there
+		this suggests that pinches are its own dimension
 
-pull direction along the wall
-directionality variance on the plane of the wall
-effort required to hang on the hold perpendicular to the wall
-effort required to match on the hold
-effort required to hang in direction of pull
-forgiveness for overshooting
+wall geometry
+	what are the independent effects of wall geometry and hold position?
+		imagine a vertical line of matchable rings
+		on anything up to vertical, would be a "classic" V0 - a ladder
+		as the wall becomes steeper, the route gets harder - but no more than V3 when it becomes a roof
+		well, what would you rate a set of monkey bars? V2?
+	okay, now imagine two vertical lines of non-matchable rings
+		imagine in between, the wall bends to either be an arete, a face, or a dihedral
 
-how do pinches, which can be used in multiple directions, fit into this framework?
-there may be multiple directionals and variances
-note that you can pull down on a pinch - the multiple directionality thing doesn't help there
-this suggests that pinches are is own dimension
-
-what are the independent effects of wall geometry and hold position?
-imagine a vertical line of matchable rings
-on anything up to vertical, would be a "classic" V0 - a ladder
-as the wall becomes steeper, the route gets harder - but no more than V3 when it becomes a roof
-well, what would you rate a set of monkey bars? V2?
-
-okay, now imagine two vertical lines of non-matchable rings
-imagine in between, the wall bends to either be an arete, a face, or a dihedral
-
-or would be ideal if I don't have to do any physics simulations
+it would be ideal if I don't have to do any physics simulations
 
 climbing terms:
 	problems
