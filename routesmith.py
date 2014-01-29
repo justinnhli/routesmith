@@ -165,6 +165,8 @@ class IsometricViewer:
 	def project(self, point):
 		projected = point.rotate(self.theta, self.phi)
 		return Point(projected.y * self.scale + self.x_offset, -projected.z * self.scale + self.y_offset)
+	def unproject(self, point):
+		return point.rotate(0, -self.phi).rotate(-self.theta, 0)
 	def move_camera(self, theta, phi):
 		self.theta += theta
 		if self.theta > 2 * math.pi:
@@ -293,30 +295,23 @@ class Wall(Drawable):
 				item = viewer.draw_polygon(self, surface.points, outline="#000000", fill="#AAAAAA", activefill="#CCCCCC", **kargs)
 				self.canvas_items[item] = index
 	def clicked(self, viewer, event, item):
+		wall_num = self.canvas_items[item]
+		surface = self.surfaces[wall_num]
+		# undo scaling and translation
+		p1 = Point(0, (event.x - viewer.x_offset) / viewer.scale, -(event.y - viewer.y_offset) / viewer.scale)
+		# create a second point on the beam
+		p2 = p1 + Point(100, 0, 0)
+		# undo rotation; first phi, then theta
+		p1, p2 = viewer.unproject(p1), viewer.unproject(p2)
+		# find the vector for the line
+		vector = p2 - p1
+		# find a scalar from p1 that gives a point on the plane 
+		scalar = (surface.origin - p1).dot(surface.normal) / (vector.dot(surface.normal))
+		# find the point
+		intersection = p1 + scalar * vector
+		position = surface.coord2pos(intersection)
 		text = []
-		text.append("wall surface #{}".format(self.canvas_items[item]))
-		surface = self.surfaces[self.canvas_items[item]]
-		text.append("normal: {}".format(surface.normal))
-		text.append("constant: {}".format(surface.constant))
-		text.append("basis1: {}".format(surface.basis_x))
-		text.append("basis2: {}".format(surface.basis_y))
-		text.append("origin: {}".format(surface.origin))
-		unscaled = Point(0, (event.x - viewer.x_offset) / viewer.scale, -(event.y - viewer.y_offset) / viewer.scale)
-		text.append("unscaled: {}".format(unscaled))
-		unrotated = unscaled.rotate(viewer.theta, viewer.phi)
-		unrotated = Point(unrotated.x, unscaled.y / math.cos(viewer.theta), unscaled.z / math.cos(viewer.phi))
-		text.append("unrotated: {}".format(unrotated))
-		unrotated = Point(0, unrotated.y, unrotated.z)
-		intersection = Point(0, 0, 0)
-		if surface.normal.x == 0:
-			# FIXME
-			pass
-		else:
-			intersection = Point((surface.constant - unrotated.dot(surface.normal)) / surface.normal.x, unrotated.y, unrotated.z)
-		text.append("intersection: {}".format(intersection))
-		rotated = intersection.rotate(-viewer.theta, -viewer.phi)
-		text.append("rotated: {}".format(rotated))
-		camera_coords = viewer.camera_coords()
+		text.append("wall surface #{} {}".format(wall_num, position))
 		return "\n".join(text)
 
 class Hold(Drawable):
@@ -489,7 +484,6 @@ if __name__ == "__main__":
 	prob = create_problem_from_file(args.problem[0])
 	climber = Climber()
 	climber.climb(prob)
-	exit()
 
 	viewer = IsometricViewer(800, 600)
 	viewer.add_drawable(prob)
