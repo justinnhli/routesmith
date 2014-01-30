@@ -260,7 +260,6 @@ class IsometricViewer:
         self.update()
     def _callback_button_1(self, event):
         text = []
-        text.append("coords: ({}, {})".format(event.x, event.y))
         closest = self.canvas.find_closest(event.x, event.y)[0]
         if closest in self.items and self.items[closest] is not None:
             text.append(self.items[closest].clicked(self, event, closest))
@@ -314,9 +313,12 @@ class Wall(Drawable):
         return "\n".join(text)
 
 class Hold(Drawable):
-    def __init__(self, surface, x, y):
+    def __init__(self, surface, x, y, index=None, start_hold=False, finish_hold=False):
         self.surface = surface
         self.position = Point(x, y)
+        self.index = index
+        self.start_hold = start_hold
+        self.finish_hold = finish_hold
     def real_coords(self):
         return self.surface.pos2coord(self.position)
     def canvas_cleared(self):
@@ -327,20 +329,38 @@ class Hold(Drawable):
         if self.surface.normal.dot(viewer.camera_coords()) > 0:
             viewer.draw_circle(self, self.real_coords(), 5, **kargs)
     def clicked(self, viewer, event, item):
-        return "hold"
+        text = []
+        text.append("hold #{}".format(self.index))
+        if self.start_hold:
+            text.append("start hold")
+        if self.finish_hold:
+            text.append("finish hold")
+        return "\n".join(text)
+
 
 class Problem(Drawable):
     def __init__(self, wall, holds=None, start_holds=None, finish_holds=None):
         self.wall = wall
-        self.holds = [] if holds is None else list(Hold(self.wall.surfaces[surface], x, y) for surface, x, y in holds)
-        self.start_holds = [] if start_holds is None else start_holds
-        self.finish_holds = [] if finish_holds is None else finish_holds
+        self.holds = [] 
+        self.start_holds = []
+        self.finish_holds = []
+        if holds is not None:
+            for surface, x, y in holds:
+                self.add_hold(surface, x, y)
+        if start_holds is not None:
+            for hold in start_holds:
+                self.add_start_hold(hold)
+        if finish_holds is not None:
+            for hold in finish_holds:
+                self.add_finish_hold(hold)
     def add_hold(self, surface, x, y):
-        self.holds.append(Hold(self.wall.surfaces[surface], x, y))
+        self.holds.append(Hold(self.wall.surfaces[surface], x, y, index=len(self.holds)))
     def add_start_hold(self, index):
         self.start_holds.append(index)
+        self.holds[index].start_hold = True
     def add_finish_hold(self, index):
         self.finish_holds.append(index)
+        self.holds[index].finish_hold = True
     def draw_wireframe(self, viewer, **kargs):
         self.wall.draw_wireframe(viewer)
         for index, hold in enumerate(self.holds):
@@ -397,9 +417,8 @@ class Climber:
         distances = Climber.create_graph(problem)
         poses = self.start_poses(problem)
         for pose in poses:
-            print(pose)
             for next_pose in self.possible_moves(pose, problem):
-                print("\t", next_pose)
+                pass
     def start_poses(self, problem):
         start_poses = []
         hand_holds = [None] + list(problem.start_holds)
