@@ -304,7 +304,7 @@ class Wall(Drawable):
 		p1, p2 = viewer.unproject(p1), viewer.unproject(p2)
 		# find the vector for the line
 		vector = p2 - p1
-		# find a scalar from p1 that gives a point on the plane 
+		# find a scalar from p1 that gives a point on the plane
 		scalar = (surface.origin - p1).dot(surface.normal) / (vector.dot(surface.normal))
 		# find the point
 		intersection = p1 + scalar * vector
@@ -363,11 +363,9 @@ class Problem(Drawable):
 # CLIMBER CLASSES
 
 class Pose:
+	mapping = {"left hand": 0, "right hand": 1, "left foot": 2, "right foot":3}
 	def __init__(self, left_hand, right_hand, left_foot, right_foot):
-		self.left_hand = left_hand
-		self.right_hand = right_hand
-		self.left_foot = left_foot
-		self.right_foot = right_foot
+		self.limbs = [left_hand, right_hand, left_foot, right_foot]
 	def __eq__(self, other):
 		return self.as_tuple() == other.as_tuple()
 	def __hash__(self):
@@ -376,6 +374,8 @@ class Pose:
 		return str(self.as_tuple())
 	def as_tuple(self):
 		return (self.left_hand, self.right_hand, self.left_foot, self.right_foot)
+	def move(self, limb, hold):
+		return Pose(*(hold if index == Pose.mapping[limb] else h for index, h, in enumerate(self.limbs)))
 
 class Climber:
 	def __init__(self):
