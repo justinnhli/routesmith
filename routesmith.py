@@ -118,7 +118,7 @@ class Surface:
 	def pos2coord(self, point):
 		return self.origin + (point.x * self.basis_x + point.y * self.basis_y)
 	def coord2pos(self, point):
-		assert point.dot(self.normal) == self.constant
+		assert abs(point.dot(self.normal) - self.constant) < TOLERANCE
 		offset = (point - self.origin)
 		return Point(offset.dot(self.basis_x), offset.dot(self.basis_y))
 	def project(self, vector):
