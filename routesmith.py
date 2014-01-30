@@ -363,9 +363,21 @@ class Problem(Drawable):
 # CLIMBER CLASSES
 
 class Pose:
-    mapping = {"left hand": 0, "right hand": 1, "left foot": 2, "right foot":3}
+    mapping = {"left_hand": 0, "right_hand": 1, "left_foot": 2, "right_foot":3}
     def __init__(self, left_hand, right_hand, left_foot, right_foot):
         self.limbs = [left_hand, right_hand, left_foot, right_foot]
+    @property
+    def left_hand(self):
+        return self.limbs[Pose.mapping["left_hand"]]
+    @property
+    def right_hand(self):
+     return self.limbs[Pose.mapping["right_hand"]]
+    @property
+    def left_foot(self):
+     return self.limbs[Pose.mapping["left_foot"]]
+    @property
+    def right_foot(self):
+     return self.limbs[Pose.mapping["right_foot"]]
     def __eq__(self, other):
         return self.as_tuple() == other.as_tuple()
     def __hash__(self):
@@ -384,6 +396,10 @@ class Climber:
     def climb(self, problem):
         distances = Climber.create_graph(problem)
         poses = self.start_poses(problem)
+        for pose in poses:
+            print(pose)
+            for next_pose in self.possible_moves(pose, problem):
+                print("\t", next_pose)
     def start_poses(self, problem):
         start_poses = []
         hand_holds = [None] + list(problem.start_holds)
@@ -397,6 +413,20 @@ class Climber:
                 if self.valid_pose(pose):
                     start_poses.append(pose)
         return start_poses
+    def possible_moves(self, pose, problem):
+        moves = []
+        # this will only occur on the first move
+        if pose.left_hand is None or pose.right_hand is None:
+            for hold in range(len(problem.holds)):
+                if pose.left_hand is None:
+                    moves.append(pose.move("left_hand", hold))
+                else:
+                    moves.append(pose.move("right_hand", hold))
+        else:
+            for hold in range(len(problem.holds)):
+                for limb in Pose.mapping:
+                    moves.append(pose.move(limb, hold))
+        return [move for move in moves if self.valid_pose(move)]
     def valid_pose(self, pose):
         return True
     def evaluate_pose(self, pose):
