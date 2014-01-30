@@ -279,7 +279,6 @@ class Wall(Drawable):
 				(max(p.x for p in points) + min(p.x for p in points)) / 2,
 				(max(p.y for p in points) + min(p.y for p in points)) / 2,
 				(max(p.z for p in points) + min(p.z for p in points)) / 2)
-		center = Point(0, 0, 0)
 		self.points = tuple(p - center for p in points)
 		self.surfaces = [Surface(self.points[i] for i in surface) for surface in surfaces]
 		self.canvas_items = {}
