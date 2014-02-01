@@ -610,7 +610,8 @@ class Climber:
         distances = {}
         for i in range(len(problem.holds)):
             for j in range(i+1, len(problem.holds)):
-                distance = Climber.surface_distance(problem, problem.holds[i].position, problem.holds[j].position)
+                distance = Climber.surface_distance(problem, problem.holds[i].wall_position, problem.holds[j].wall_position)
+                print(i, j, distance)
                 distances[(i, j)] = distance
                 distances[(j, i)] = distance
         return distances
@@ -662,9 +663,10 @@ def detect_file_type(path):
 
 if __name__ == "__main__":
     arg_parser = ArgumentParser()
-    arg_parser.set_defaults(climb=False)
+    arg_parser.set_defaults(climb=False, view=True)
     arg_parser.add_argument("path", nargs=1, help="wall or problem file")
     arg_parser.add_argument("--climb", action="store_true", help="simulate the moves")
+    arg_parser.add_argument("--blind", action="store_false", help="don't show visualization")
     args = arg_parser.parse_args()
     args.path = args.path[0]
 
