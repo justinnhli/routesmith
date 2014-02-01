@@ -346,7 +346,6 @@ class Hold(Drawable):
             text.append("finish hold")
         return "\n".join(text)
 
-
 class Problem(Drawable):
     def __init__(self, wall, holds=None, start_holds=None, finish_holds=None):
         self.wall = wall
@@ -573,6 +572,7 @@ class Climber:
 
 def create_wall_from_file(path):
     sections = []
+    path = realpath(expanduser(path))
     with open(path) as fd:
         sections = fd.read().strip().split("\n\n")
     vertices = tuple(tuple(float(r) for r in line.split()) for line in sections[0].strip().splitlines())
@@ -601,23 +601,39 @@ def create_problem_from_file(path):
     finishes = tuple(int(n) for n in sections[3].strip().split())
     return Problem(wall, holds, starts, finishes)
 
+def detect_file_type(path):
+    sections = []
+    path = realpath(expanduser(path))
+    with open(path) as fd:
+        sections = fd.read().strip().split("\n\n")
+    if len(sections) == 2:
+        return "wall"
+    elif len(sections) == 4:
+        return "problem"
+    else:
+        return None
+
 if __name__ == "__main__":
     arg_parser = ArgumentParser()
     arg_parser.set_defaults(climb=False)
-    arg_parser.add_argument("--problem", help="problem file")
-    arg_parser.add_argument("--wall", help="wall file")
+    arg_parser.add_argument("path", nargs=1, help="wall or problem file")
     arg_parser.add_argument("--climb", action="store_true", help="simulate the moves")
     args = arg_parser.parse_args()
+    args.path = args.path[0]
 
-    if args.wall:
-        wall = create_wall_from_file(args.wall)
+    file_type = detect_file_type(args.path)
+    if file_type == "wall":
+        wall = create_wall_from_file(args.path)
         thing = wall
-    else:
-        prob = create_problem_from_file(args.problem)
+    elif file_type == "problem":
+        prob = create_problem_from_file(args.path)
         if args.climb:
             climber = Climber()
             climber.climb(prob)
         thing = prob
+    else:
+        print("unknown file type")
+        exit(1)
 
     viewer = IsometricViewer(800, 600)
     viewer.add_drawable(thing)
