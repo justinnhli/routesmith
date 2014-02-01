@@ -611,7 +611,6 @@ class Climber:
         for i in range(len(problem.holds)):
             for j in range(i+1, len(problem.holds)):
                 distance = Climber.surface_distance(problem, problem.holds[i].wall_position, problem.holds[j].wall_position)
-                print(i, j, distance)
                 distances[(i, j)] = distance
                 distances[(j, i)] = distance
         return distances
