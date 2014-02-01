@@ -96,10 +96,18 @@ class Plane:
 
 class Drawable(metaclass=ABCMeta):
     @abstractmethod
+    def canvas_cleared(self):
+        raise NotImplementedError()
+    @abstractmethod
     def draw_wireframe(self):
         raise NotImplementedError()
     @abstractmethod
     def draw(self):
+        raise NotImplementedError()
+
+class Clickable(metaclass=ABCMeta):
+    @abstractmethod
+    def clicked(self):
         raise NotImplementedError()
 
 class IsometricViewer:
@@ -294,7 +302,7 @@ class WallPosition:
     def real_coords(self):
         return self.surface.pos2coord(self.position)
 
-class Wall(Drawable):
+class Wall(Drawable, Clickable):
     def __init__(self, points, surfaces):
         points = [Point(*v) for v in points]
         center = Point(
@@ -349,7 +357,7 @@ class Hold():
     def real_coords(self):
         return self.wall_position.real_coords
 
-class Problem(Drawable):
+class Problem(Drawable, Clickable):
     def __init__(self, wall, holds=None, start_holds=None, finish_holds=None):
         self.wall = wall
         self.holds = []
