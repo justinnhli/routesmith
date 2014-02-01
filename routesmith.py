@@ -286,6 +286,14 @@ class Surface:
     def project(self, vector):
         return vector - (vector - self.points[0]).dot(self.normal) * self.normal
 
+class WallPosition:
+    def __init__(self, surface, position):
+        self.surface = surface
+        self.position = position
+    @property
+    def real_coords(self):
+        return self.surface.pos2coord(self.position)
+
 class Wall(Drawable):
     def __init__(self, points, surfaces):
         points = [Point(*v) for v in points]
@@ -327,41 +335,19 @@ class Wall(Drawable):
         text.append("wall surface #{} {}".format(wall_num, position))
         return "\n".join(text)
 
-class WallPosition:
-    def __init__(self, surface, position):
-        self.surface = surface
-        self.position = position
-    @property
-    def real_coords(self):
-        return self.surface.pos2coord(self.position)
-
-class Hold(Drawable):
-    def __init__(self, wall_position, index=None, start_hold=False, finish_hold=False, comment=None):
+class Hold():
+    def __init__(self, wall_position, comment=None):
         self.wall_position = wall_position
-        self.index = index
-        self.start_hold = start_hold
-        self.finish_hold = finish_hold
         self.comment = comment
+    @property
+    def surface(self):
+        return self.wall_position.surface
+    @property
+    def position(self):
+        return self.wall_position.position
     @property
     def real_coords(self):
         return self.wall_position.real_coords
-    def canvas_cleared(self):
-        pass
-    def draw_wireframe(self, viewer, **kargs):
-        viewer.draw_circle(self, self.real_coords, 5, **kargs)
-    def draw(self, viewer, **kargs):
-        if self.surface.normal.dot(viewer.camera_coords) > 0:
-            viewer.draw_circle(self, self.real_coords, 5, **kargs)
-    def clicked(self, viewer, event, item):
-        text = []
-        text.append("hold #{}".format(self.index))
-        if self.comment:
-            text.append(self.comment)
-        if self.start_hold:
-            text.append("start hold")
-        if self.finish_hold:
-            text.append("finish hold")
-        return "\n".join(text)
 
 class Problem(Drawable):
     def __init__(self, wall, holds=None, start_holds=None, finish_holds=None):
@@ -378,35 +364,57 @@ class Problem(Drawable):
         if finish_holds is not None:
             for hold in finish_holds:
                 self.add_finish_hold(hold)
+        self.canvas_items = {}
     def add_hold(self, surface, x, y, comment):
         if comment:
-            self.holds.append(Hold(WallPosition(self.wall.surfaces[surface], Point(x, y)), index=len(self.holds), comment=comment))
+            self.holds.append(Hold(WallPosition(self.wall.surfaces[surface], Point(x, y)), comment=comment))
         else:
-            self.holds.append(Hold(WallPosition(self.wall.surfaces[surface], Point(x, y)), index=len(self.holds)))
+            self.holds.append(Hold(WallPosition(self.wall.surfaces[surface], Point(x, y))))
     def add_start_hold(self, index):
         self.start_holds.append(index)
-        self.holds[index].start_hold = True
     def add_finish_hold(self, index):
         self.finish_holds.append(index)
-        self.holds[index].finish_hold = True
+    def canvas_cleared(self):
+        self.canvas_items.clear()
     def draw_wireframe(self, viewer, **kargs):
         self.wall.draw_wireframe(viewer)
-        for index, hold in enumerate(self.holds):
+        for index in range(len(self.holds)):
             if index in self.start_holds:
-                hold.draw_wireframe(viewer, fill="#FF0000")
+                self.draw_hold_wireframe(viewer, index, fill="#FF0000")
             elif index in self.finish_holds:
-                hold.draw_wireframe(viewer, fill="#00FF00")
+                self.draw_hold_wireframe(viewer, index, fill="#00FF00")
             else:
-                hold.draw_wireframe(viewer, fill="#0000FF")
+                self.draw_hold_wireframe(viewer, index, fill="#0000FF")
     def draw(self, viewer, **kargs):
         self.wall.draw(viewer)
-        for index, hold in enumerate(self.holds):
+        for index in range(len(self.holds)):
             if index in self.start_holds:
-                hold.draw(viewer, fill="#FF0000")
+                self.draw_hold(viewer, index, fill="#FF0000")
             elif index in self.finish_holds:
-                hold.draw(viewer, fill="#00FF00")
+                self.draw_hold(viewer, index, fill="#00FF00")
             else:
-                hold.draw(viewer, fill="#0000FF")
+                self.draw_hold(viewer, index, fill="#0000FF")
+    def draw_hold_wireframe(self, viewer, hold_num, **kargs):
+        item = viewer.draw_circle(self, self.holds[hold_num].real_coords, 5, **kargs)
+        self.canvas_items[item] = hold_num
+    def draw_hold(self, viewer, hold_num, **kargs):
+        hold = self.holds[hold_num]
+        if hold.surface.normal.dot(viewer.camera_coords) > 0: # FIXME this check for visibility should be elsewhere
+            item = viewer.draw_circle(self, hold.real_coords, 5, **kargs)
+            self.canvas_items[item] = hold_num
+    def clicked(self, viewer, event, item):
+        hold_num = self.canvas_items[item]
+        hold = self.holds[hold_num]
+        text = []
+        text.append("hold #{}".format(hold_num))
+        text.append("surface #{} {}".format(self.wall.surfaces.index(hold.surface), hold.position))
+        if hold.comment:
+            text.append(hold.comment)
+        if hold_num in self.start_holds:
+            text.append("start hold")
+        if hold_num in self.finish_holds:
+            text.append("finish hold")
+        return "\n".join(text)
 
 # CLIMBER CLASSES
 
