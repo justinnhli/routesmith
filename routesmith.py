@@ -3,7 +3,7 @@
 import math
 from abc import ABCMeta, abstractmethod
 from argparse import ArgumentParser
-from collections import Counter, deque
+from collections import Counter
 from copy import copy
 from itertools import product
 from numbers import Real
@@ -449,13 +449,13 @@ class Pose:
         return self.limbs[Pose.mapping["left_hand"]]
     @property
     def right_hand(self):
-     return self.limbs[Pose.mapping["right_hand"]]
+        return self.limbs[Pose.mapping["right_hand"]]
     @property
     def left_foot(self):
-     return self.limbs[Pose.mapping["left_foot"]]
+        return self.limbs[Pose.mapping["left_foot"]]
     @property
     def right_foot(self):
-     return self.limbs[Pose.mapping["right_foot"]]
+        return self.limbs[Pose.mapping["right_foot"]]
     def __eq__(self, other):
         return self.as_tuple() == other.as_tuple()
     def __hash__(self):
