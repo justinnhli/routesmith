@@ -343,8 +343,9 @@ class Wall(Drawable, Clickable):
         return "\n".join(text)
 
 class Hold():
-    def __init__(self, wall_position, comment=None):
+    def __init__(self, wall_position, width, comment=None):
         self.wall_position = wall_position
+        self.width = width
         self.comment = comment
     @property
     def surface(self):
@@ -363,8 +364,8 @@ class Problem(Drawable, Clickable):
         self.start_holds = []
         self.finish_holds = []
         if holds is not None:
-            for surface, x, y, comment in holds:
-                self.add_hold(surface, x, y, comment)
+            for surface, x, y, width, comment in holds:
+                self.add_hold(surface, x, y, width, comment)
         if start_holds is not None:
             for hold in start_holds:
                 self.add_start_hold(hold)
@@ -372,11 +373,11 @@ class Problem(Drawable, Clickable):
             for hold in finish_holds:
                 self.add_finish_hold(hold)
         self.canvas_items = {}
-    def add_hold(self, surface, x, y, comment):
+    def add_hold(self, surface, x, y, width, comment):
         if comment:
-            self.holds.append(Hold(WallPosition(self.wall.surfaces[surface], Point(x, y)), comment=comment))
+            self.holds.append(Hold(WallPosition(self.wall.surfaces[surface], Point(x, y)), width, comment=comment))
         else:
-            self.holds.append(Hold(WallPosition(self.wall.surfaces[surface], Point(x, y))))
+            self.holds.append(Hold(WallPosition(self.wall.surfaces[surface], Point(x, y)), width))
     def add_start_hold(self, index):
         self.start_holds.append(index)
     def add_finish_hold(self, index):
@@ -403,21 +404,23 @@ class Problem(Drawable, Clickable):
                 self.draw_hold(viewer, index, fill="#0000FF")
     def draw_hold_wireframe(self, viewer, hold_num, **kargs):
         hold = self.holds[hold_num]
+        half_width = hold.width / 2
         corners = []
-        corners.append(hold.surface.pos2coord(hold.position + Point(-5,  5)))
-        corners.append(hold.surface.pos2coord(hold.position + Point(-5, -5)))
-        corners.append(hold.surface.pos2coord(hold.position + Point( 5, -5)))
-        corners.append(hold.surface.pos2coord(hold.position + Point( 5,  5)))
+        corners.append(hold.surface.pos2coord(hold.position + Point(-half_width,  half_width)))
+        corners.append(hold.surface.pos2coord(hold.position + Point(-half_width, -half_width)))
+        corners.append(hold.surface.pos2coord(hold.position + Point( half_width, -half_width)))
+        corners.append(hold.surface.pos2coord(hold.position + Point( half_width,  half_width)))
         item = viewer.draw_ellipse(self, corners, **kargs)
         self.canvas_items[item] = hold_num
     def draw_hold(self, viewer, hold_num, **kargs):
         hold = self.holds[hold_num]
         if hold.surface.normal.dot(viewer.camera_coords) > 0: # FIXME this check for visibility should be elsewhere
+            half_width = hold.width / 2
             corners = []
-            corners.append(hold.surface.pos2coord(hold.position + Point(-5,  5)))
-            corners.append(hold.surface.pos2coord(hold.position + Point(-5, -5)))
-            corners.append(hold.surface.pos2coord(hold.position + Point( 5, -5)))
-            corners.append(hold.surface.pos2coord(hold.position + Point( 5,  5)))
+            corners.append(hold.surface.pos2coord(hold.position + Point(-half_width,  half_width)))
+            corners.append(hold.surface.pos2coord(hold.position + Point(-half_width, -half_width)))
+            corners.append(hold.surface.pos2coord(hold.position + Point( half_width, -half_width)))
+            corners.append(hold.surface.pos2coord(hold.position + Point( half_width,  half_width)))
             item = viewer.draw_ellipse(self, corners, **kargs)
             self.canvas_items[item] = hold_num
     def clicked(self, viewer, event, item):
@@ -638,8 +641,8 @@ def create_problem_from_file(path):
         else:
             coords = line
             comment = ""
-        surface, x, y = coords.split()
-        holds.append((int(surface), float(x), float(y), comment))
+        surface, x, y, width = coords.split()
+        holds.append((int(surface), float(x), float(y), float(width), comment))
     starts = tuple(int(n) for n in sections[2].strip().split())
     finishes = tuple(int(n) for n in sections[3].strip().split())
     return Problem(wall, holds, starts, finishes)

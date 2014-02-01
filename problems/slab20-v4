@@ -1,11 +1,11 @@
 ../walls/slab20
 
-0 160 80 # decent jug
-0 100 10
-0 80 80 # undercling
-0 115 110 # shitty foot/pinch
-0 85 220
-0 160 10
+0 160 80 10 # decent jug
+0 100 10  2
+0 80 80 10 # undercling
+0 115 110 2 # shitty foot/pinch
+0 85 220 10
+0 160 10 2
 
 0
 
