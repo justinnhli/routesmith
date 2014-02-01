@@ -413,7 +413,37 @@ class Pose:
     def as_tuple(self):
         return (self.left_hand, self.right_hand, self.left_foot, self.right_foot)
     def move(self, limb, hold):
-        return Pose(*(hold if index == Pose.mapping[limb] else h for index, h, in enumerate(self.limbs)))
+        return Move(Pose(*self.as_tuple()), Pose(*(hold if index == Pose.mapping[limb] else h for index, h, in enumerate(self.limbs))))
+
+class Move:
+    def __init__(self, before, after):
+        self.before = before
+        self.after = after
+    def __eq__(self, other):
+        return self.as_tuple() == other.as_tuple()
+    def __hash__(self):
+        return hash(self.as_tuple())
+    def as_tuple(self):
+        return (self.prev_pose, self.next_pose)
+
+class SearchNode():
+    def __init__(self, path, actions, cost, heuristic):
+        self.path = path
+        self.actions = actions
+        self.cost = cost
+        self.heuristic = heuristic
+    @property
+    def state(self):
+        return self.path[-1]
+    @property
+    def depth(self):
+        return len(self.path)
+    def __eq__(self, other):
+        return self.as_tuple() == other.as_tuple()
+    def __hash__(self):
+        return hash(self.state)
+    def as_tuple(self):
+        return (self.path, self.actions, self.cost, self.heuristic)
 
 class Climber:
     def __init__(self):
@@ -421,10 +451,29 @@ class Climber:
         self.armspan = 175
     def climb(self, problem):
         distances = Climber.create_graph(problem)
-        poses = self.start_poses(problem)
-        for pose in poses:
-            for next_pose in self.possible_moves(pose, problem):
-                pass
+        for index, sequence in enumerate(self.search(problem)):
+            if index > 10:
+                break
+            print(", ".join(str(pose) for pose in sequence))
+    def search(self, problem):
+        frontier = [SearchNode([pose,], [None,], self.evaluate_pose(pose), self.how_much_further(pose, problem)) for pose in self.start_poses(problem)]
+        visited = set()
+        while frontier:
+            cur_node = frontier.pop(0)
+            while cur_node.state in visited:
+                cur_node = frontier.pop(0)
+            visited.add(cur_node.state)
+            if Climber.at_finish(cur_node.state, problem):
+                yield cur_node.path
+            for move in self.possible_next_moves(cur_node.state, problem):
+                node = SearchNode(
+                        cur_node.path + [move.after,],
+                        cur_node.actions + [move,],
+                        cur_node.cost + self.evaluate_pose(move.after) + self.evaluate_move(move),
+                        self.how_much_further(move.after, problem))
+                frontier.append(node)
+            frontier = sorted(frontier, key=(lambda node: node.cost + node.heuristic))
+            frontier = list(filter(None, frontier))
     def start_poses(self, problem):
         start_poses = []
         hand_holds = [None] + list(problem.start_holds)
@@ -438,7 +487,7 @@ class Climber:
                 if self.valid_pose(pose):
                     start_poses.append(pose)
         return start_poses
-    def possible_moves(self, pose, problem):
+    def possible_next_moves(self, pose, problem):
         moves = []
         # this will only occur on the first move
         if pose.left_hand is None or pose.right_hand is None:
@@ -451,11 +500,18 @@ class Climber:
             for hold in range(len(problem.holds)):
                 for limb in Pose.mapping:
                     moves.append(pose.move(limb, hold))
-        return [move for move in moves if self.valid_pose(move)]
+        return [move for move in moves if self.valid_pose(move.after)]
+    @staticmethod
+    def at_finish(pose, problem):
+        return pose.left_hand in problem.finish_holds and pose.right_hand in problem.finish_holds
     def valid_pose(self, pose):
         return True
     def evaluate_pose(self, pose):
-        pass
+        return 1
+    def evaluate_move(self, move):
+        return 1
+    def how_much_further(self, pose, problem):
+        return 1
     @staticmethod
     def surface_distance(problem, wp1, wp2):
         # FIXME we don't want to count dimples between points
