@@ -173,11 +173,9 @@ class IsometricViewer:
         item = self.canvas.create_line(p1.x, p1.y, p2.x, p2.y, **kargs)
         self.items[item] = owner
         return item
-    def draw_ellipse(self, owner, p1, p2, **kargs):
-        assert isinstance(p1, Point) and isinstance(p2, Point)
-        p1 = self.project(p1)
-        p2 = self.project(p2)
-        item = self.canvas.create_oval(p1.x, p1.y, p2.x, p2.y, **kargs)
+    def draw_ellipse(self, owner, corners, **kargs):
+        assert all(isinstance(p, Point) for p in corners)
+        item = self.draw_polygon(owner, corners, outline="#000000", smooth=1, **kargs)
         self.items[item] = owner
         return item
     def draw_polygon(self, owner, pts, **kargs):
@@ -405,24 +403,22 @@ class Problem(Drawable, Clickable):
                 self.draw_hold(viewer, index, fill="#0000FF")
     def draw_hold_wireframe(self, viewer, hold_num, **kargs):
         hold = self.holds[hold_num]
-        if viewer.theta > math.pi:
-            p1 = hold.surface.pos2coord(hold.position + Point(-5, -5))
-            p2 = hold.surface.pos2coord(hold.position + Point( 5,  5))
-        else:
-            p1 = hold.surface.pos2coord(hold.position + Point(-5,  5))
-            p2 = hold.surface.pos2coord(hold.position + Point( 5, -5))
-        item = viewer.draw_ellipse(self, p1, p2, **kargs)
+        corners = []
+        corners.append(hold.surface.pos2coord(hold.position + Point(-5,  5)))
+        corners.append(hold.surface.pos2coord(hold.position + Point(-5, -5)))
+        corners.append(hold.surface.pos2coord(hold.position + Point( 5, -5)))
+        corners.append(hold.surface.pos2coord(hold.position + Point( 5,  5)))
+        item = viewer.draw_ellipse(self, corners, **kargs)
         self.canvas_items[item] = hold_num
     def draw_hold(self, viewer, hold_num, **kargs):
         hold = self.holds[hold_num]
         if hold.surface.normal.dot(viewer.camera_coords) > 0: # FIXME this check for visibility should be elsewhere
-            if viewer.theta > math.pi:
-                p1 = hold.surface.pos2coord(hold.position + Point(-5, -5))
-                p2 = hold.surface.pos2coord(hold.position + Point( 5,  5))
-            else:
-                p1 = hold.surface.pos2coord(hold.position + Point(-5,  5))
-                p2 = hold.surface.pos2coord(hold.position + Point( 5, -5))
-            item = viewer.draw_ellipse(self, p1, p2, **kargs)
+            corners = []
+            corners.append(hold.surface.pos2coord(hold.position + Point(-5,  5)))
+            corners.append(hold.surface.pos2coord(hold.position + Point(-5, -5)))
+            corners.append(hold.surface.pos2coord(hold.position + Point( 5, -5)))
+            corners.append(hold.surface.pos2coord(hold.position + Point( 5,  5)))
+            item = viewer.draw_ellipse(self, corners, **kargs)
             self.canvas_items[item] = hold_num
     def clicked(self, viewer, event, item):
         hold_num = self.canvas_items[item]
