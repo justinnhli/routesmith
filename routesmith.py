@@ -112,6 +112,9 @@ class IsometricViewer:
         self.text = ""
         self.reset_viewport()
         self.init_gui()
+    @property
+    def camera_coords(self):
+        return Point(math.cos(self.theta) * math.cos(self.phi), -math.sin(self.theta) * math.cos(self.phi), math.sin(self.phi))
     def reset_viewport(self):
         self.theta = math.pi / 8
         self.phi = math.pi / 16
@@ -151,8 +154,6 @@ class IsometricViewer:
             self.theta += 2 * math.pi
         if -math.pi / 2 <= self.phi + phi <= math.pi / 2:
             self.phi += phi
-    def camera_coords(self):
-        return Point(math.cos(self.theta) * math.cos(self.phi), -math.sin(self.theta) * math.cos(self.phi), math.sin(self.phi))
     def clear(self):
         for item in self.items:
             self.canvas.delete(item)
@@ -189,7 +190,7 @@ class IsometricViewer:
         self.clear()
         header = [
                 "(theta, phi): ({:.3f}, {:.3f})".format(self.theta, self.phi),
-                "(x, y, z): {}".format(self.camera_coords()),
+                "(x, y, z): {}".format(self.camera_coords),
                 ]
         text = "\n".join(header) + "\n\n" + self.text
         item = self.canvas.create_text((10, 10), anchor="nw", text=text)
@@ -303,7 +304,7 @@ class Wall(Drawable):
             self.canvas_items[item] = index
     def draw(self, viewer, **kargs):
         for index, surface in enumerate(self.surfaces):
-            if surface.normal.dot(viewer.camera_coords()) > 0:
+            if surface.normal.dot(viewer.camera_coords) > 0:
                 item = viewer.draw_polygon(self, surface.points, outline="#000000", fill="#AAAAAA", activefill="#CCCCCC", **kargs)
                 self.canvas_items[item] = index
     def clicked(self, viewer, event, item):
@@ -330,25 +331,27 @@ class WallPosition:
     def __init__(self, surface, position):
         self.surface = surface
         self.position = position
+    @property
     def real_coords(self):
         return self.surface.pos2coord(self.position)
 
 class Hold(Drawable):
-    def __init__(self, position, index=None, start_hold=False, finish_hold=False, comment=None):
-        self.position = position
+    def __init__(self, wall_position, index=None, start_hold=False, finish_hold=False, comment=None):
+        self.wall_position = wall_position
         self.index = index
         self.start_hold = start_hold
         self.finish_hold = finish_hold
         self.comment = comment
+    @property
     def real_coords(self):
-        return self.position.real_coords()
+        return self.wall_position.real_coords
     def canvas_cleared(self):
         pass
     def draw_wireframe(self, viewer, **kargs):
-        viewer.draw_circle(self, self.real_coords(), 5, **kargs)
+        viewer.draw_circle(self, self.real_coords, 5, **kargs)
     def draw(self, viewer, **kargs):
-        if self.surface.normal.dot(viewer.camera_coords()) > 0:
-            viewer.draw_circle(self, self.real_coords(), 5, **kargs)
+        if self.surface.normal.dot(viewer.camera_coords) > 0:
+            viewer.draw_circle(self, self.real_coords, 5, **kargs)
     def clicked(self, viewer, event, item):
         text = []
         text.append("hold #{}".format(self.index))
@@ -499,8 +502,8 @@ class Climber:
         for left_hand, right_hand in product(hand_holds, repeat=2):
             if left_hand is None and right_hand is None:
                 continue
-            hand_height = max(problem.holds[hand].real_coords().z for hand in (left_hand, right_hand) if hand is not None)
-            foot_holds = [None] + list(index for index, hold in enumerate(problem.holds) if hold.real_coords().z <= hand_height)
+            hand_height = max(problem.holds[hand].real_coords.z for hand in (left_hand, right_hand) if hand is not None)
+            foot_holds = [None] + list(index for index, hold in enumerate(problem.holds) if hold.real_coords.z <= hand_height)
             for left_foot, right_foot in product(foot_holds, repeat=2):
                 pose = Pose(left_hand, right_hand, left_foot, right_foot)
                 if self.valid_pose(pose):
@@ -536,9 +539,9 @@ class Climber:
     @staticmethod
     def surface_distance(problem, wp1, wp2):
         # FIXME we don't want to count dimples between points
-        vector = wp2.real_coords() - wp1.real_coords()
+        vector = wp2.real_coords - wp1.real_coords
         surface = wp1.surface
-        source = wp1.real_coords()
+        source = wp1.real_coords
         distance = 0
         while surface != wp2.surface:
             # project vector onto wall
@@ -570,7 +573,7 @@ class Climber:
                 print("I DON'T KNOW WHAT'S GOING ON!!!")
                 exit()
         # this is the wall with the ending point
-        distance += (wp2.real_coords() - source).length
+        distance += (wp2.real_coords - source).length
         return distance
     @staticmethod
     def create_graph(problem):
