@@ -592,13 +592,22 @@ def create_problem_from_file(path):
 
 if __name__ == "__main__":
     arg_parser = ArgumentParser()
-    arg_parser.add_argument("problem", nargs=1, help="problem file")
+    arg_parser.set_defaults(climb=False)
+    arg_parser.add_argument("--problem", help="problem file")
+    arg_parser.add_argument("--wall", help="wall file")
+    arg_parser.add_argument("--climb", action="store_true", help="simulate the moves")
     args = arg_parser.parse_args()
 
-    prob = create_problem_from_file(args.problem[0])
-    climber = Climber()
-    climber.climb(prob)
+    if args.wall:
+        wall = create_wall_from_file(args.wall)
+        thing = wall
+    else:
+        prob = create_problem_from_file(args.problem)
+        if args.climb:
+            climber = Climber()
+            climber.climb(prob)
+        thing = prob
 
     viewer = IsometricViewer(800, 600)
-    viewer.add_drawable(prob)
+    viewer.add_drawable(thing)
     viewer.display()
