@@ -76,6 +76,24 @@ class Point:
         l = self.length
         return Point(*(i / l for i in self.values))
 
+class Plane:
+    def __init__(self, points):
+        assert len(points) >= 3
+        points = list(points)
+        # keep a reference point
+        self.reference = points[0]
+        # find the plane (ax + by + cz = constant)
+        self.normal = Counter((points[i-1] - points[i-2]).cross(points[i] - points[i-1]).normalize() for i in range(1, len(points))).most_common(1)[0][0]
+        self.constant = self.normal.dot(points[0])
+        # make sure points are co-planar
+        assert all(self.on_plane(p) for p in points), "Vertices are not planar"
+    def on_plane(self, point):
+        return abs(point.dot(self.normal) - self.constant) < TOLERANCE
+    def project(self, vector):
+        return vector - (vector - self.reference).dot(self.normal) * self.normal
+
+# GRAPHICS CLASSES
+
 class Drawable(metaclass=ABCMeta):
     @abstractmethod
     def draw_wireframe(self):
@@ -83,48 +101,6 @@ class Drawable(metaclass=ABCMeta):
     @abstractmethod
     def draw(self):
         raise NotImplementedError()
-
-# MODELING CLASSES
-
-class Surface:
-    def __init__(self, points=None):
-        if points is None:
-            self.points = deque()
-        else:
-            self.points = deque(points)
-        # find the plane (ax + by + cz = constant)
-        self.normal = Counter((self.points[i-1] - self.points[i-2]).cross(self.points[i] - self.points[i-1]).normalize() for i in range(1, len(self.points))).most_common(1)[0][0]
-        self.constant = self.normal.dot(self.points[0])
-        # make sure points are co-planar
-        assert all(abs(p.dot(self.normal) - self.constant) < TOLERANCE for p in self.points), "Vertices are not planar"
-        # use the first point as a temporary origin
-        self.origin = self.points[0]
-        # define the first basis, depending on whether the surface is horizontal
-        if abs(self.normal.z) == 1:
-            self.basis_x = Point(0, self.normal.z, -self.normal.x).normalize()
-            if self.normal.cross(self.basis_x).x < 0:
-                self.basis_x = -self.basis_x
-        else:
-            self.basis_x = Point(self.normal.y, -self.normal.x, 0).normalize()
-            if self.normal.cross(self.basis_x).z < 0:
-                self.basis_x = -self.basis_x
-        self.basis_y = self.normal.cross(self.basis_x)
-        # find the lowest transformed coordinates for each basis
-        min_x = min((self.points[i] - self.origin).dot(self.basis_x) for i in range(len(self.points)))
-        min_y = min((self.points[i] - self.origin).dot(self.basis_y) for i in range(len(self.points)))
-        # move the origin to that point
-        self.origin += min_x * self.basis_x + min_y * self.basis_y
-        # TODO make sure surface is simple (no line intersections)
-    def pos2coord(self, point):
-        return self.origin + (point.x * self.basis_x + point.y * self.basis_y)
-    def coord2pos(self, point):
-        assert abs(point.dot(self.normal) - self.constant) < TOLERANCE
-        offset = (point - self.origin)
-        return Point(offset.dot(self.basis_x), offset.dot(self.basis_y))
-    def project(self, vector):
-        return vector - (vector - self.points[0]).dot(self.normal) * self.normal
-
-# GRAPHICS CLASSES
 
 class IsometricViewer:
     def __init__(self, width, height):
@@ -270,6 +246,44 @@ class IsometricViewer:
         pass
 
 # CLIMBING CLASSES
+
+class Surface:
+    def __init__(self, points):
+        self.points = list(points)
+        assert len(self.points) >= 3
+        self.plane = Plane(self.points)
+        # use the first point as a temporary origin
+        self.origin = self.points[0]
+        # define the first basis, depending on whether the surface is horizontal
+        if abs(self.normal.z) == 1:
+            self.basis_x = Point(0, self.normal.z, -self.normal.x).normalize()
+            if self.normal.cross(self.basis_x).x < 0:
+                self.basis_x = -self.basis_x
+        else:
+            self.basis_x = Point(self.normal.y, -self.normal.x, 0).normalize()
+            if self.normal.cross(self.basis_x).z < 0:
+                self.basis_x = -self.basis_x
+        self.basis_y = self.normal.cross(self.basis_x)
+        # find the lowest transformed coordinates for each basis
+        min_x = min((self.points[i] - self.origin).dot(self.basis_x) for i in range(len(self.points)))
+        min_y = min((self.points[i] - self.origin).dot(self.basis_y) for i in range(len(self.points)))
+        # move the origin to that point
+        self.origin += min_x * self.basis_x + min_y * self.basis_y
+        # TODO make sure surface is simple (no line intersections)
+    @property
+    def normal(self):
+        return self.plane.normal
+    @property
+    def constant(self):
+        return self.plane.constant
+    def pos2coord(self, point):
+        return self.origin + (point.x * self.basis_x + point.y * self.basis_y)
+    def coord2pos(self, point):
+        assert self.plane.on_plane(point)
+        offset = (point - self.origin)
+        return Point(offset.dot(self.basis_x), offset.dot(self.basis_y))
+    def project(self, vector):
+        return vector - (vector - self.points[0]).dot(self.normal) * self.normal
 
 class Wall(Drawable):
     def __init__(self, points, surfaces):
