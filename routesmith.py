@@ -320,11 +320,12 @@ class WallPosition:
         return self.surface.pos2coord(self.position)
 
 class Hold(Drawable):
-    def __init__(self, position, index=None, start_hold=False, finish_hold=False):
+    def __init__(self, position, index=None, start_hold=False, finish_hold=False, comment=None):
         self.position = position
         self.index = index
         self.start_hold = start_hold
         self.finish_hold = finish_hold
+        self.comment = comment
     def real_coords(self):
         return self.position.real_coords()
     def canvas_cleared(self):
@@ -337,6 +338,8 @@ class Hold(Drawable):
     def clicked(self, viewer, event, item):
         text = []
         text.append("hold #{}".format(self.index))
+        if self.comment:
+            text.append(self.comment)
         if self.start_hold:
             text.append("start hold")
         if self.finish_hold:
@@ -351,16 +354,19 @@ class Problem(Drawable):
         self.start_holds = []
         self.finish_holds = []
         if holds is not None:
-            for surface, x, y in holds:
-                self.add_hold(surface, x, y)
+            for surface, x, y, comment in holds:
+                self.add_hold(surface, x, y, comment)
         if start_holds is not None:
             for hold in start_holds:
                 self.add_start_hold(hold)
         if finish_holds is not None:
             for hold in finish_holds:
                 self.add_finish_hold(hold)
-    def add_hold(self, surface, x, y):
-        self.holds.append(Hold(WallPosition(self.wall.surfaces[surface], Point(x, y)), index=len(self.holds)))
+    def add_hold(self, surface, x, y, comment):
+        if comment:
+            self.holds.append(Hold(WallPosition(self.wall.surfaces[surface], Point(x, y)), index=len(self.holds), comment=comment))
+        else:
+            self.holds.append(Hold(WallPosition(self.wall.surfaces[surface], Point(x, y)), index=len(self.holds)))
     def add_start_hold(self, index):
         self.start_holds.append(index)
         self.holds[index].start_hold = True
@@ -584,8 +590,13 @@ def create_problem_from_file(path):
     wall = create_wall_from_file(wall_path)
     holds = []
     for line in sections[1].strip().splitlines():
-        surface, x, y = line.split()
-        holds.append((int(surface), float(x), float(y)))
+        if "#" in line:
+            coords, comment = (text.strip() for text in line.split("#"))
+        else:
+            coords = line
+            comment = ""
+        surface, x, y = coords.split()
+        holds.append((int(surface), float(x), float(y), comment))
     starts = tuple(int(n) for n in sections[2].strip().split())
     finishes = tuple(int(n) for n in sections[3].strip().split())
     return Problem(wall, holds, starts, finishes)
