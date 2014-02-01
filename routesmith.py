@@ -312,15 +312,21 @@ class Wall(Drawable):
         text.append("wall surface #{} {}".format(wall_num, position))
         return "\n".join(text)
 
-class Hold(Drawable):
-    def __init__(self, surface, x, y, index=None, start_hold=False, finish_hold=False):
+class WallPosition:
+    def __init__(self, surface, position):
         self.surface = surface
-        self.position = Point(x, y)
+        self.position = position
+    def real_coords(self):
+        return self.surface.pos2coord(self.position)
+
+class Hold(Drawable):
+    def __init__(self, position, index=None, start_hold=False, finish_hold=False):
+        self.position = position
         self.index = index
         self.start_hold = start_hold
         self.finish_hold = finish_hold
     def real_coords(self):
-        return self.surface.pos2coord(self.position)
+        return self.position.real_coords()
     def canvas_cleared(self):
         pass
     def draw_wireframe(self, viewer, **kargs):
@@ -341,7 +347,7 @@ class Hold(Drawable):
 class Problem(Drawable):
     def __init__(self, wall, holds=None, start_holds=None, finish_holds=None):
         self.wall = wall
-        self.holds = [] 
+        self.holds = []
         self.start_holds = []
         self.finish_holds = []
         if holds is not None:
@@ -354,7 +360,7 @@ class Problem(Drawable):
             for hold in finish_holds:
                 self.add_finish_hold(hold)
     def add_hold(self, surface, x, y):
-        self.holds.append(Hold(self.wall.surfaces[surface], x, y, index=len(self.holds)))
+        self.holds.append(Hold(WallPosition(self.wall.surfaces[surface], Point(x, y)), index=len(self.holds)))
     def add_start_hold(self, index):
         self.start_holds.append(index)
         self.holds[index].start_hold = True
@@ -451,48 +457,50 @@ class Climber:
     def evaluate_pose(self, pose):
         pass
     @staticmethod
+    def surface_distance(problem, wp1, wp2):
+        # FIXME we don't want to count dimples between points
+        vector = wp2.real_coords() - wp1.real_coords()
+        surface = wp1.surface
+        source = wp1.real_coords()
+        distance = 0
+        while surface != wp2.surface:
+            # project vector onto wall
+            projection = surface.project(vector)
+            hold_source = surface.coord2pos(source)
+            hold_vector = (surface.coord2pos(surface.project(source + projection)) - hold_source).normalize()
+            # find the edge that this projection crosses
+            rotated_points = copy(surface.points)
+            rotated_points.rotate(-1)
+            for p1, p2 in zip(surface.points, rotated_points):
+                # find where the edge and the projection intersects
+                edge_source = surface.coord2pos(p1)
+                edge_vector = (surface.coord2pos(p2) - edge_source).normalize()
+                # frame the system of equations as a projection
+                solution = Point((edge_source - hold_source).dot(hold_vector), -(edge_source - hold_source).dot(edge_vector))
+                # discard if the solution is not, in fact, an intersection
+                if solution.x <= 0 or solution.y < 0 or hold_source + solution.x * hold_vector != edge_source + solution.y * edge_vector:
+                    continue
+                # add to the distance
+                distance += solution.x
+                # find the next wall
+                candidates = [s for s in problem.wall.surfaces if s != surface and p1 in s.points and p2 in s.points]
+                assert len(candidates) == 1
+                source = surface.pos2coord(hold_source + solution.x * hold_vector)
+                surface = candidates[0]
+                # move on to the next wall
+                break
+            else:
+                print("I DON'T KNOW WHAT'S GOING ON!!!")
+                exit()
+        # this is the wall with the ending point
+        distance += (wp2.real_coords() - source).length
+        return distance
+    @staticmethod
     def create_graph(problem):
         distances = {}
         for i in range(len(problem.holds)):
             for j in range(i+1, len(problem.holds)):
-                h1 = problem.holds[i]
-                h2 = problem.holds[j]
-                vector = h2.real_coords() - h1.real_coords()
-                # FIXME we don't want to count dimples between two holds
-                surface = h1.surface
-                source = h1.real_coords()
-                distance = 0
-                while surface != h2.surface:
-                    # project vector onto wall
-                    projection = surface.project(vector)
-                    hold_source = surface.coord2pos(source)
-                    hold_vector = (surface.coord2pos(surface.project(source + projection)) - hold_source).normalize()
-                    # find the edge that this projection crosses
-                    rotated_points = copy(surface.points)
-                    rotated_points.rotate(-1)
-                    for p1, p2 in zip(surface.points, rotated_points):
-                        # find where the edge and the projection intersects
-                        edge_source = surface.coord2pos(p1)
-                        edge_vector = (surface.coord2pos(p2) - edge_source).normalize()
-                        # frame the system of equations as a projection
-                        solution = Point((edge_source - hold_source).dot(hold_vector), -(edge_source - hold_source).dot(edge_vector))
-                        # discard if the solution is not, in fact, an intersection
-                        if solution.x <= 0 or solution.y < 0 or hold_source + solution.x * hold_vector != edge_source + solution.y * edge_vector:
-                            continue
-                        # add to the distance
-                        distance += solution.x
-                        # find the next wall
-                        candidates = [s for s in problem.wall.surfaces if s != surface and p1 in s.points and p2 in s.points]
-                        assert len(candidates) == 1
-                        source = surface.pos2coord(hold_source + solution.x * hold_vector)
-                        surface = candidates[0]
-                        # move on to the next wall
-                        break
-                    else:
-                        print("I DON'T KNOW WHAT'S GOING ON!!!")
-                        exit()
-                # this is the wall with the ending hold
-                distance += (h2.real_coords() - source).length
+                distance = Climber.surface_distance(problem, problem.holds[i].position, problem.holds[j].position)
                 distances[(i, j)] = distance
                 distances[(j, i)] = distance
         return distances
