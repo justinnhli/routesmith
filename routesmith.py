@@ -245,7 +245,8 @@ class IsometricViewer:
     def _callback_button_1(self, event):
         text = []
         closest = self.canvas.find_closest(event.x, event.y)[0]
-        if closest in self.items and self.items[closest] is not None:
+        overlapping = self.canvas.find_overlapping(event.x, event.y, event.x+1, event.y+1)
+        if closest in overlapping and closest in self.items and self.items[closest] is not None:
             text.append(self.items[closest].clicked(self, event, closest))
         self.text = "\n".join(text)
         self.update()
