@@ -500,11 +500,13 @@ class Climber:
             for hold in range(len(problem.holds)):
                 for limb in Pose.mapping:
                     moves.append(pose.move(limb, hold))
-        return [move for move in moves if self.valid_pose(move.after)]
+        return [move for move in moves if self.valid_move(move)]
     @staticmethod
     def at_finish(pose, problem):
         return pose.left_hand in problem.finish_holds and pose.right_hand in problem.finish_holds
     def valid_pose(self, pose):
+        return True
+    def valid_move(self, move):
         return True
     def evaluate_pose(self, pose):
         return 1
