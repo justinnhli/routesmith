@@ -285,9 +285,9 @@ class Surface:
     @property
     def constant(self):
         return self.plane.constant
-    def pos2coord(self, point):
+    def pos_to_coords(self, point):
         return self.origin + (point.x * self.basis_x + point.y * self.basis_y)
-    def coord2pos(self, point):
+    def coords_to_pos(self, point):
         assert self.plane.on_plane(point)
         offset = (point - self.origin)
         return Point(offset.dot(self.basis_x), offset.dot(self.basis_y))
@@ -300,7 +300,7 @@ class WallPosition:
         self.position = position
     @property
     def real_coords(self):
-        return self.surface.pos2coord(self.position)
+        return self.surface.pos_to_coords(self.position)
 
 class Wall(Drawable, Clickable):
     def __init__(self, points, surfaces):
@@ -312,6 +312,45 @@ class Wall(Drawable, Clickable):
         self.points = tuple(p - center for p in points)
         self.surfaces = [Surface(self.points[i] for i in surface) for surface in surfaces]
         self.canvas_items = {}
+    def surface_distance(self, wp1, wp2):
+        # FIXME we don't want to count dimples between points
+        # FIXME if the wall goes in, then back out, need to be more sophisticated
+        vector = wp2.real_coords - wp1.real_coords
+        surface = wp1.surface
+        source = wp1.real_coords
+        distance = 0
+        while surface != wp2.surface:
+            # project vector onto wall
+            projection = surface.project(vector)
+            hold_source = surface.coords_to_pos(source)
+            hold_vector = (surface.coords_to_pos(surface.project(source + projection)) - hold_source).normalize()
+            # find the edge that this projection crosses
+            rotated_points = copy(surface.points)
+            rotated_points.rotate(-1)
+            for p1, p2 in zip(surface.points, rotated_points):
+                # find where the edge and the projection intersects
+                edge_source = surface.coords_to_pos(p1)
+                edge_vector = (surface.coords_to_pos(p2) - edge_source).normalize()
+                # frame the system of equations as a projection
+                solution = Point((edge_source - hold_source).dot(hold_vector), -(edge_source - hold_source).dot(edge_vector))
+                # discard if the solution is not, in fact, an intersection
+                if solution.x <= 0 or solution.y < 0 or hold_source + solution.x * hold_vector != edge_source + solution.y * edge_vector:
+                    continue
+                # add to the distance
+                distance += solution.x
+                # find the next wall
+                candidates = [s for s in self.surfaces if s != surface and p1 in s.points and p2 in s.points]
+                assert len(candidates) == 1
+                source = surface.pos_to_coords(hold_source + solution.x * hold_vector)
+                surface = candidates[0]
+                # move on to the next wall
+                break
+            else:
+                print("I DON'T KNOW WHAT'S GOING ON!!!")
+                exit()
+        # this is the wall with the ending point
+        distance += (wp2.real_coords - source).length
+        return distance
     def canvas_cleared(self):
         self.canvas_items.clear()
     def draw_wireframe(self, viewer, **kargs):
@@ -338,7 +377,7 @@ class Wall(Drawable, Clickable):
         scalar = (surface.origin - p1).dot(surface.normal) / (vector.dot(surface.normal))
         # find the point
         intersection = p1 + scalar * vector
-        position = surface.coord2pos(intersection)
+        position = surface.coords_to_pos(intersection)
         text = []
         text.append("wall surface #{} {}".format(wall_num, position))
         return "\n".join(text)
@@ -407,10 +446,10 @@ class Problem(Drawable, Clickable):
         hold = self.holds[hold_num]
         half_width = hold.width / 2
         corners = []
-        corners.append(hold.surface.pos2coord(hold.position + Point(-half_width,  half_width)))
-        corners.append(hold.surface.pos2coord(hold.position + Point(-half_width, -half_width)))
-        corners.append(hold.surface.pos2coord(hold.position + Point( half_width, -half_width)))
-        corners.append(hold.surface.pos2coord(hold.position + Point( half_width,  half_width)))
+        corners.append(hold.surface.pos_to_coords(hold.position + Point(-half_width,  half_width)))
+        corners.append(hold.surface.pos_to_coords(hold.position + Point(-half_width, -half_width)))
+        corners.append(hold.surface.pos_to_coords(hold.position + Point( half_width, -half_width)))
+        corners.append(hold.surface.pos_to_coords(hold.position + Point( half_width,  half_width)))
         item = viewer.draw_ellipse(self, corners, **kargs)
         self.canvas_items[item] = hold_num
     def draw_hold(self, viewer, hold_num, **kargs):
@@ -418,10 +457,10 @@ class Problem(Drawable, Clickable):
         if hold.surface.normal.dot(viewer.camera_coords) > 0: # FIXME this check for visibility should be elsewhere
             half_width = hold.width / 2
             corners = []
-            corners.append(hold.surface.pos2coord(hold.position + Point(-half_width,  half_width)))
-            corners.append(hold.surface.pos2coord(hold.position + Point(-half_width, -half_width)))
-            corners.append(hold.surface.pos2coord(hold.position + Point( half_width, -half_width)))
-            corners.append(hold.surface.pos2coord(hold.position + Point( half_width,  half_width)))
+            corners.append(hold.surface.pos_to_coords(hold.position + Point(-half_width,  half_width)))
+            corners.append(hold.surface.pos_to_coords(hold.position + Point(-half_width, -half_width)))
+            corners.append(hold.surface.pos_to_coords(hold.position + Point( half_width, -half_width)))
+            corners.append(hold.surface.pos_to_coords(hold.position + Point( half_width,  half_width)))
             item = viewer.draw_ellipse(self, corners, **kargs)
             self.canvas_items[item] = hold_num
     def clicked(self, viewer, event, item):
@@ -461,7 +500,7 @@ class Pose:
     def __hash__(self):
         return hash(self.as_tuple())
     def __str__(self):
-        return str(self.as_tuple())
+        return "Pose(" + ", ".join(str(p) for p in self.as_tuple()) + ")"
     def as_tuple(self):
         return (self.left_hand, self.right_hand, self.left_foot, self.right_foot)
     def move(self, limb, hold):
@@ -477,6 +516,21 @@ class Move:
         return hash(self.as_tuple())
     def as_tuple(self):
         return (self.prev_pose, self.next_pose)
+
+class Climber:
+    def __init__(self):
+        self.height = 175
+        self.armspan = 175
+    def valid_pose(self, pose):
+        return True
+    def valid_move(self, move):
+        return True
+    def evaluate_pose(self, pose):
+        return 1
+    def evaluate_move(self, move):
+        return 1
+
+# THE OUVRIR
 
 class SearchNode():
     def __init__(self, path, actions, cost, heuristic):
@@ -497,123 +551,85 @@ class SearchNode():
     def as_tuple(self):
         return (self.path, self.actions, self.cost, self.heuristic)
 
-class Climber:
-    def __init__(self):
-        self.height = 175
-        self.armspan = 175
-    def climb(self, problem):
-        distances = Climber.create_graph(problem)
-        for index, sequence in enumerate(self.search(problem)):
+class Ouvrir:
+    def __init__(self, climber, problem):
+        self.climber = climber
+        self.problem = problem
+        self.hold_map = {}
+        for index, hold in enumerate(self.problem.holds):
+            self.hold_map[hold.real_coords] = index
+        self.distances = {}
+        for i in range(len(self.problem.holds)):
+            for j in range(i+1, len(self.problem.holds)):
+                distance = self.problem.wall.surface_distance(self.problem.holds[i].wall_position, self.problem.holds[j].wall_position)
+                self.distances[(i, j)] = distance
+                self.distances[(j, i)] = distance
+    def ouvrir(self):
+        for index, sequence in enumerate(self.search()):
             if index > 10:
                 break
-            print(", ".join(str(pose) for pose in sequence))
-    def search(self, problem):
-        frontier = [SearchNode([pose,], [None,], self.evaluate_pose(pose), self.how_much_further(pose, problem)) for pose in self.start_poses(problem)]
+            print(", ".join("<" + ",".join(str(self.coords_to_hold(coords)) for coords in pose.as_tuple()) + ">" for pose in sequence))
+    def start_poses(self):
+        start_poses = []
+        hand_holds = [None,] + [self.problem.holds[i] for i in self.problem.start_holds]
+        for left_hand, right_hand in product(hand_holds, repeat=2):
+            if left_hand is None and right_hand is None:
+                continue
+            foot_holds = [None,] + list(self.problem.holds)
+            for left_foot, right_foot in product(foot_holds, repeat=2):
+                pose = Pose(*(self.hold_to_coords(hold) for hold in (left_hand, right_hand, left_foot, right_foot)))
+                if self.climber.valid_pose(pose):
+                    start_poses.append(pose)
+        return start_poses
+    def next_moves(self, pose):
+        moves = []
+        # this will only occur on the first move
+        if pose.left_hand is None or pose.right_hand is None:
+            for index, hold in enumerate(self.problem.holds):
+                if pose.left_hand is None:
+                    moves.append(pose.move("left_hand", hold.real_coords))
+                else:
+                    moves.append(pose.move("right_hand", hold.real_coords))
+        else:
+            for index, hold in enumerate(self.problem.holds):
+                for limb in Pose.mapping:
+                    moves.append(pose.move(limb, hold.real_coords))
+        return [move for move in moves if self.climber.valid_move(move)]
+    def how_much_further(self, pose):
+        return 1
+    def at_finish(self, pose):
+        return (pose.left_hand is not None and pose.right_hand is not None and
+                self.hold_map[pose.left_hand] in self.problem.finish_holds and self.hold_map[pose.right_hand] in self.problem.finish_holds)
+    def search(self):
+        frontier = [SearchNode([pose,], [None,], self.climber.evaluate_pose(pose), self.how_much_further(pose)) for pose in self.start_poses()]
         visited = set()
         while frontier:
             cur_node = frontier.pop(0)
             while cur_node.state in visited:
                 cur_node = frontier.pop(0)
             visited.add(cur_node.state)
-            if Climber.at_finish(cur_node.state, problem):
+            if self.at_finish(cur_node.state):
                 yield cur_node.path
-            for move in self.possible_next_moves(cur_node.state, problem):
+            for move in self.next_moves(cur_node.state):
                 node = SearchNode(
                         cur_node.path + [move.after,],
                         cur_node.actions + [move,],
-                        cur_node.cost + self.evaluate_pose(move.after) + self.evaluate_move(move),
-                        self.how_much_further(move.after, problem))
+                        cur_node.cost + self.climber.evaluate_pose(move.after) + self.climber.evaluate_move(move),
+                        self.how_much_further(move.after))
                 frontier.append(node)
             frontier = sorted(frontier, key=(lambda node: node.cost + node.heuristic))
             frontier = list(filter(None, frontier))
-    def start_poses(self, problem):
-        start_poses = []
-        hand_holds = [None] + list(problem.start_holds)
-        for left_hand, right_hand in product(hand_holds, repeat=2):
-            if left_hand is None and right_hand is None:
-                continue
-            hand_height = max(problem.holds[hand].real_coords.z for hand in (left_hand, right_hand) if hand is not None)
-            foot_holds = [None] + list(index for index, hold in enumerate(problem.holds) if hold.real_coords.z <= hand_height)
-            for left_foot, right_foot in product(foot_holds, repeat=2):
-                pose = Pose(left_hand, right_hand, left_foot, right_foot)
-                if self.valid_pose(pose):
-                    start_poses.append(pose)
-        return start_poses
-    def possible_next_moves(self, pose, problem):
-        moves = []
-        # this will only occur on the first move
-        if pose.left_hand is None or pose.right_hand is None:
-            for hold in range(len(problem.holds)):
-                if pose.left_hand is None:
-                    moves.append(pose.move("left_hand", hold))
-                else:
-                    moves.append(pose.move("right_hand", hold))
+    def hold_to_coords(self, hold):
+        if hold is None:
+            return None
         else:
-            for hold in range(len(problem.holds)):
-                for limb in Pose.mapping:
-                    moves.append(pose.move(limb, hold))
-        return [move for move in moves if self.valid_move(move)]
-    @staticmethod
-    def at_finish(pose, problem):
-        return pose.left_hand in problem.finish_holds and pose.right_hand in problem.finish_holds
-    def valid_pose(self, pose):
-        return True
-    def valid_move(self, move):
-        return True
-    def evaluate_pose(self, pose):
-        return 1
-    def evaluate_move(self, move):
-        return 1
-    def how_much_further(self, pose, problem):
-        return 1
-    @staticmethod
-    def surface_distance(problem, wp1, wp2):
-        # FIXME we don't want to count dimples between points
-        vector = wp2.real_coords - wp1.real_coords
-        surface = wp1.surface
-        source = wp1.real_coords
-        distance = 0
-        while surface != wp2.surface:
-            # project vector onto wall
-            projection = surface.project(vector)
-            hold_source = surface.coord2pos(source)
-            hold_vector = (surface.coord2pos(surface.project(source + projection)) - hold_source).normalize()
-            # find the edge that this projection crosses
-            rotated_points = copy(surface.points)
-            rotated_points.rotate(-1)
-            for p1, p2 in zip(surface.points, rotated_points):
-                # find where the edge and the projection intersects
-                edge_source = surface.coord2pos(p1)
-                edge_vector = (surface.coord2pos(p2) - edge_source).normalize()
-                # frame the system of equations as a projection
-                solution = Point((edge_source - hold_source).dot(hold_vector), -(edge_source - hold_source).dot(edge_vector))
-                # discard if the solution is not, in fact, an intersection
-                if solution.x <= 0 or solution.y < 0 or hold_source + solution.x * hold_vector != edge_source + solution.y * edge_vector:
-                    continue
-                # add to the distance
-                distance += solution.x
-                # find the next wall
-                candidates = [s for s in problem.wall.surfaces if s != surface and p1 in s.points and p2 in s.points]
-                assert len(candidates) == 1
-                source = surface.pos2coord(hold_source + solution.x * hold_vector)
-                surface = candidates[0]
-                # move on to the next wall
-                break
-            else:
-                print("I DON'T KNOW WHAT'S GOING ON!!!")
-                exit()
-        # this is the wall with the ending point
-        distance += (wp2.real_coords - source).length
-        return distance
-    @staticmethod
-    def create_graph(problem):
-        distances = {}
-        for i in range(len(problem.holds)):
-            for j in range(i+1, len(problem.holds)):
-                distance = Climber.surface_distance(problem, problem.holds[i].wall_position, problem.holds[j].wall_position)
-                distances[(i, j)] = distance
-                distances[(j, i)] = distance
-        return distances
+            return hold.real_coords
+    def coords_to_hold(self, coords):
+        if coords is None:
+            return None
+        else:
+            return self.hold_map[coords]
+
 
 # MAIN
 
@@ -670,19 +686,21 @@ if __name__ == "__main__":
     args.path = args.path[0]
 
     file_type = detect_file_type(args.path)
+    interactable = None
     if file_type == "wall":
         wall = create_wall_from_file(args.path)
-        thing = wall
+        interactable = wall
     elif file_type == "problem":
-        prob = create_problem_from_file(args.path)
+        interactable = create_problem_from_file(args.path)
         if args.climb:
             climber = Climber()
-            climber.climb(prob)
-        thing = prob
+            ouvrir = Ouvrir(climber, interactable)
+            ouvrir.ouvrir()
+        thing = interactable
     else:
         print("unknown file type")
         exit(1)
 
     viewer = IsometricViewer(800, 600)
-    viewer.add_drawable(thing)
+    viewer.add_drawable(interactable)
     viewer.display()
