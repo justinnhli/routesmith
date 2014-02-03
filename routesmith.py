@@ -523,9 +523,25 @@ class Move:
         return (self.prev_pose, self.next_pose)
 
 class Climber:
-    def __init__(self):
-        self.height = 175
-        self.armspan = 175
+    proportions = {
+        "fingers": 0.0462,
+        "palm": 0.0578,
+        "forearm": 0.127,
+        "upperarm": 0.173,
+        "shoulders": 0.191,
+        "toe-ankle": 0.773,
+        "ankle-heel": 0.227,
+        "ankle-ground": 0.0347,
+        "knee-ankle": 0.220,
+        "hip-knee": 0.220,
+        "waist-hip": 0.139
+        "shoulders-waist": 0.220,
+        "neck-shoulders": 0.0289,
+        "head-neck": 0.139,
+    }
+    def __init__(self, height=175, ape_index=1):
+        self.height = height
+        self.armspan = height + 2.5 * ape_index
     def valid_pose(self, pose):
         return True
     def valid_move(self, move):

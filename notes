@@ -35,6 +35,26 @@ wall geometry
 
 it would be ideal if I don't have to do any physics simulations
 
+body proportions
+	Assuming a height of 173cm and an ape index of 0 (eg. armspan = height),
+	assume a standing climber has these features at the following heights (in cm):
+		* crown: 173
+		* chin: 149
+		* shoulder: 144
+		* hip: 106
+		* crotch: 82
+		* knee: 44
+		* ankle: 6
+	Additionally, assume the following lengths on the armspan:
+		* fingers: 8
+		* palm: 10
+		* forearm: 22
+		* upper arm: 30
+		* shoulder-shoulder: 33
+	Finally, assume the following lengths on the foot:
+		* toe-ankle: 17
+		* ankle-tow: 5
+
 climbing terms:
 	problems
 		Sit start: Starting a climb from a position in which the climber is sitting on the floor. This is common in climbing gyms in order to fit an extra move into the climb. Noted as SS or SDS in some topo guides.
