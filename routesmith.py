@@ -480,31 +480,36 @@ class Problem(Drawable, Clickable):
 # CLIMBER CLASSES
 
 class Pose:
-    mapping = {"left_hand": 0, "right_hand": 1, "left_foot": 2, "right_foot":3}
-    def __init__(self, left_hand, right_hand, left_foot, right_foot):
-        self.limbs = [left_hand, right_hand, left_foot, right_foot]
+    def __init__(self, left_hand=None, right_hand=None, left_foot=None, right_foot=None):
+        self.limbs = {}
+        self.limbs["left_hand"] = left_hand
+        self.limbs["right_hand"] = right_hand
+        self.limbs["left_foot"] = left_foot
+        self.limbs["right_foot"] = right_foot
     @property
     def left_hand(self):
-        return self.limbs[Pose.mapping["left_hand"]]
+        return self.limbs["left_hand"]
     @property
     def right_hand(self):
-        return self.limbs[Pose.mapping["right_hand"]]
+        return self.limbs["right_hand"]
     @property
     def left_foot(self):
-        return self.limbs[Pose.mapping["left_foot"]]
+        return self.limbs["left_foot"]
     @property
     def right_foot(self):
-        return self.limbs[Pose.mapping["right_foot"]]
+        return self.limbs["right_foot"]
     def __eq__(self, other):
         return self.as_tuple() == other.as_tuple()
     def __hash__(self):
         return hash(self.as_tuple())
+    def __iter__(self):
+        return iter(self.limbs.items())
     def __str__(self):
         return "Pose(" + ", ".join(str(p) for p in self.as_tuple()) + ")"
     def as_tuple(self):
         return (self.left_hand, self.right_hand, self.left_foot, self.right_foot)
     def move(self, limb, hold):
-        return Move(Pose(*self.as_tuple()), Pose(*(hold if index == Pose.mapping[limb] else h for index, h, in enumerate(self.limbs))))
+        return Move(Pose(*self.as_tuple()), Pose(*(hold if limb == k else v for k, v in self.limbs.items())))
 
 class Move:
     def __init__(self, before, after):
@@ -592,7 +597,7 @@ class Ouvrir:
                     moves.append(pose.move("right_hand", hold.real_coords))
         else:
             for index, hold in enumerate(self.problem.holds):
-                for limb in Pose.mapping:
+                for limb, point in pose:
                     moves.append(pose.move(limb, hold.real_coords))
         return [move for move in moves if self.climber.valid_move(move)]
     def how_much_further(self, pose):
