@@ -568,7 +568,7 @@ class SearchNode():
     def __eq__(self, other):
         return self.as_tuple() == other.as_tuple()
     def __hash__(self):
-        return hash(self.state)
+        return hash(self.as_tuple())
     def as_tuple(self):
         return (self.path, self.actions, self.cost, self.heuristic)
 
@@ -622,12 +622,12 @@ class Ouvrir:
         return (pose.left_hand is not None and pose.right_hand is not None and
                 self.hold_map[pose.left_hand] in self.problem.finish_holds and self.hold_map[pose.right_hand] in self.problem.finish_holds)
     def search(self):
-        frontier = [SearchNode([pose,], [None,], self.climber.evaluate_pose(pose), self.how_much_further(pose)) for pose in self.start_poses()]
+        queue = [SearchNode([pose,], [None,], self.climber.evaluate_pose(pose), self.how_much_further(pose)) for pose in self.start_poses()]
         visited = set()
-        while frontier:
-            cur_node = frontier.pop(0)
+        while queue:
+            cur_node = queue.pop(0)
             while cur_node.state in visited:
-                cur_node = frontier.pop(0)
+                cur_node = queue.pop(0)
             visited.add(cur_node.state)
             if self.at_finish(cur_node.state):
                 yield cur_node.path
@@ -637,9 +637,9 @@ class Ouvrir:
                         cur_node.actions + [move,],
                         cur_node.cost + self.climber.evaluate_pose(move.after) + self.climber.evaluate_move(move),
                         self.how_much_further(move.after))
-                frontier.append(node)
-            frontier = sorted(frontier, key=(lambda node: node.cost + node.heuristic))
-            frontier = list(filter(None, frontier))
+                queue.append(node)
+            queue = sorted(queue, key=(lambda node: node.cost + node.heuristic))
+            queue = list(filter(None, queue))
     def hold_to_coords(self, hold):
         if hold is None:
             return None
@@ -650,7 +650,6 @@ class Ouvrir:
             return None
         else:
             return self.hold_map[coords]
-
 
 # MAIN
 
