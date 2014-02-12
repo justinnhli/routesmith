@@ -313,8 +313,14 @@ class Wall(Drawable, Clickable):
         self.surfaces = [Surface(self.points[i] for i in surface) for surface in surfaces]
         self.canvas_items = {}
     def surface_distance(self, wp1, wp2):
-        # FIXME we don't want to count dimples between points
-        # FIXME if the wall goes in, then back out, need to be more sophisticated
+        # FIXME
+        # what we actually want to is take a plane along the two holds, then
+        # trace the wall to see if it ever crosses the original line. The plane
+        # is defined by the direct vector and the vector perpendicular to its
+        # projection on the x-y plane. That is, at either hold, the 
+        # plane should intersect the constant z plane such that the resulting
+        # line is perpendicular to the vector's projection onto the constant
+        # z plane. Some adjustment may be needed for holds along a roof.
         vector = wp2.real_coords - wp1.real_coords
         surface = wp1.surface
         source = wp1.real_coords
