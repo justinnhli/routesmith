@@ -540,7 +540,7 @@ class Climber:
         "ankle-ground": 0.0347,
         "knee-ankle": 0.220,
         "hip-knee": 0.220,
-        "waist-hip": 0.139
+        "waist-hip": 0.139,
         "shoulders-waist": 0.220,
         "neck-shoulders": 0.0289,
         "head-neck": 0.139,
