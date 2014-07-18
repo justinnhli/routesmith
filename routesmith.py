@@ -543,11 +543,10 @@ def detect_file_type(path):
     else:
         return None
 
-if __name__ == "__main__":
+def main():
     arg_parser = ArgumentParser()
     arg_parser.set_defaults(climb=False, view=True)
     arg_parser.add_argument("path", nargs=1, help="wall or problem file")
-    arg_parser.add_argument("--climb", action="store_true", help="simulate the moves")
     arg_parser.add_argument("--blind", action="store_false", help="don't show visualization")
     args = arg_parser.parse_args()
     args.path = args.path[0]
@@ -559,11 +558,6 @@ if __name__ == "__main__":
         interactable = wall
     elif file_type == "problem":
         interactable = create_problem_from_file(args.path)
-        if args.climb:
-            climber = Climber()
-            ouvrir = Ouvrir(climber, interactable)
-            ouvrir.ouvrir()
-        thing = interactable
     else:
         print("unknown file type")
         exit(1)
@@ -571,3 +565,6 @@ if __name__ == "__main__":
     viewer = IsometricViewer(800, 600)
     viewer.add_drawable(interactable)
     viewer.display()
+
+if __name__ == "__main__":
+    main()
