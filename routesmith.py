@@ -5,7 +5,6 @@ from abc import ABCMeta, abstractmethod
 from argparse import ArgumentParser
 from collections import Counter
 from copy import copy
-from itertools import product
 from numbers import Real
 from os.path import dirname, expanduser, join as join_path, realpath
 
@@ -114,15 +113,15 @@ class Drawable(metaclass=ABCMeta):
     def canvas_cleared(self):
         raise NotImplementedError()
     @abstractmethod
-    def draw_wireframe(self):
+    def draw_wireframe(self, viewer, **kargs):
         raise NotImplementedError()
     @abstractmethod
-    def draw(self):
+    def draw(self, viewer, **kargs):
         raise NotImplementedError()
 
 class Clickable(metaclass=ABCMeta):
     @abstractmethod
-    def clicked(self):
+    def clicked(self, viewer, event, item):
         raise NotImplementedError()
 
 class IsometricViewer:
@@ -133,6 +132,12 @@ class IsometricViewer:
         self.drawables = []
         self.items = {}
         self.text = ""
+        self.theta = 0
+        self.phi = 0
+        self.scale = 0
+        self.x_offset = 0
+        self.y_offset = 0
+        self.canvas = Canvas(Tk(), width=self.width, height=self.height)
         self.reset_viewport()
         self.init_gui()
     @property
@@ -145,7 +150,6 @@ class IsometricViewer:
         self.x_offset = self.width / 2
         self.y_offset = self.height / 2
     def init_gui(self):
-        self.canvas = Canvas(Tk(), width=self.width, height=self.height)
         self.canvas.pack()
         self.canvas.focus_set()
         self.canvas.bind("<Up>", self._callback_commandline_up)
@@ -353,7 +357,7 @@ class Wall(Drawable, Clickable):
                 edge_source = surface.coords_to_pos(p1)
                 edge_vector = (surface.coords_to_pos(p2) - edge_source).normalize()
                 # frame the system of equations as a projection
-                solution = Point3((edge_source - hold_source).dot(hold_vector), -(edge_source - hold_source).dot(edge_vector))
+                solution = Point2((edge_source - hold_source).dot(hold_vector), -(edge_source - hold_source).dot(edge_vector))
                 # discard if the solution is not, in fact, an intersection
                 if solution.x <= 0 or solution.y < 0 or hold_source + solution.x * hold_vector != edge_source + solution.y * edge_vector:
                     continue
