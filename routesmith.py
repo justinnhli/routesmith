@@ -64,6 +64,8 @@ class Point2(Point):
     @property
     def y(self):
         return self.values[1]
+    def rotate(self, theta):
+        return self.__class__(self.x * math.cos(theta) + self.y * math.sin(theta), self.x * -math.sin(theta) + self.y * math.cos(theta))
 
 class Point3(Point):
     def __init__(self, x, y, z):
@@ -79,15 +81,15 @@ class Point3(Point):
         return self.values[2]
     def cross(self, p):
         assert type(self) == type(p)
-        return Point3(self.y * p.z - self.z * p.y, self.z * p.x - self.x * p.z, self.x * p.y - self.y * p.x)
+        return self.__class__(self.y * p.z - self.z * p.y, self.z * p.x - self.x * p.z, self.x * p.y - self.y * p.x)
     def rotate(self, theta, phi):
         assert self.dimensions == 3
         sin_theta = math.sin(theta)
         cos_theta = math.cos(theta)
         sin_phi = math.sin(phi)
         cos_phi = math.cos(phi)
-        p = Point3(self.x * cos_theta + self.y * -sin_theta, self.x * sin_theta + self.y * cos_theta, self.z)
-        p = Point3(p.x * cos_phi + p.z * sin_phi, p.y, p.x * -sin_phi + p.z * cos_phi)
+        p = self.__class__(self.x * cos_theta + self.y * -sin_theta, self.x * sin_theta + self.y * cos_theta, self.z)
+        p = self.__class__(p.x * cos_phi + p.z * sin_phi, p.y, p.x * -sin_phi + p.z * cos_phi)
         return p
 
 class Plane:
