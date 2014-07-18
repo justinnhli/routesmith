@@ -3,8 +3,8 @@
 import math
 from sys import argv
 
-HEIGHT = 300
-WIDTH = 240
+HEIGHT = 450
+WIDTH = 450
 
 def ssv(iterable):
     return " ".join(str(i) for i in iterable)
@@ -23,14 +23,15 @@ if __name__ == "__main__":
     print(ssv((0, 0, 0)))
     print(ssv((0, WIDTH, 0)))
     print(ssv((depth, WIDTH, HEIGHT)))
-    if sign < 0:
-        print(ssv((depth, 0, 0)))
-        print(ssv((depth, WIDTH, 0)))
-    elif sign > 0:
-        print(ssv((0, 0, HEIGHT)))
-        print(ssv((0, WIDTH, HEIGHT)))
+    if angle != 0:
+        if sign < 0:
+            print(ssv((depth, 0, 0)))
+            print(ssv((depth, WIDTH, 0)))
+        elif sign > 0:
+            print(ssv((0, 0, HEIGHT)))
+            print(ssv((0, WIDTH, HEIGHT)))
     print()
     print(ssv(range(4)))
-    if sign != 0:
+    if angle != 0 and sign != 0:
         print(ssv((0, 4, 1)))
         print(ssv((2, 3, 5)))
