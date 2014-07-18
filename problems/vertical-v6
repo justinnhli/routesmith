@@ -1,0 +1,27 @@
+../walls/vertical
+
+0 225  90 25 5 0 # matched start
+0 160  15  2 2 30 # decent foot
+0 185 125  5 2.5 -90 # 1L: flat crimp
+0 185 160  7 3.5 -90 # 2R: positive crimp
+0 125 145  7 3.5 75 # 3L: flat crimp
+0 110 170  7 3.5 0 # 4L: positive crimp
+0 200  50  2 2 30 # decent foot
+0  75  65  2 2 30 # decent foot
+0  55 145  7 3.5 -105 # 5L: positive crimp
+0  70 185  7 3.5 60 # 6R: flat crimp
+0  30 210 10 10 0 # 7L: jug
+0   5 120  2 2 30 # decent foot
+0  280 270 25 2 0
+0  280 240 25 2 0
+0  280 210 25 2 0
+0  280 180 25 2 0
+0  280 150 25 2 0
+0  280 120 25 2 0
+0  280  90 25 2 0
+0  280  60 25 2 0
+0  280  30 25 2 0
+
+0
+
+10
