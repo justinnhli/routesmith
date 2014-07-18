@@ -8,7 +8,7 @@ from copy import copy
 from numbers import Real
 from os.path import dirname, expanduser, join as join_path, realpath
 
-from tkinter import Canvas, Tk, mainloop
+from tkinter import Canvas, Tk, mainloop, ARC
 
 # CONSTANTS
 
@@ -453,39 +453,31 @@ class Problem(Drawable, Clickable):
         self.wall.draw_wireframe(viewer)
         for index in range(len(self.holds)):
             if index in self.start_holds:
-                self.draw_hold_wireframe(viewer, index, fill="#FF0000")
+                self.draw_hold_wireframe(viewer, index, fill="#FF0000", outline="#000000")
             elif index in self.finish_holds:
-                self.draw_hold_wireframe(viewer, index, fill="#00FF00")
+                self.draw_hold_wireframe(viewer, index, fill="#00FF00", outline="#000000")
             else:
-                self.draw_hold_wireframe(viewer, index, fill="#0000FF")
+                self.draw_hold_wireframe(viewer, index, fill="#0000FF", outline="#000000")
     def draw(self, viewer, **kargs):
         self.wall.draw(viewer)
         for index in range(len(self.holds)):
             if index in self.start_holds:
-                self.draw_hold(viewer, index, fill="#FF0000")
+                self.draw_hold(viewer, index, fill="#FF0000", outline="#000000")
             elif index in self.finish_holds:
-                self.draw_hold(viewer, index, fill="#00FF00")
+                self.draw_hold(viewer, index, fill="#00FF00", outline="#000000")
             else:
-                self.draw_hold(viewer, index, fill="#0000FF")
+                self.draw_hold(viewer, index, fill="#0000FF", outline="#000000")
     def draw_hold_wireframe(self, viewer, hold_num, **kargs):
         hold = self.holds[hold_num]
         half_width = hold.width / 2
-        corners = []
-        corners.append(hold.surface.pos_to_coords(hold.position + Point2(-half_width,  half_width)))
-        corners.append(hold.surface.pos_to_coords(hold.position + Point2(-half_width, -half_width)))
-        corners.append(hold.surface.pos_to_coords(hold.position + Point2( half_width, -half_width)))
-        corners.append(hold.surface.pos_to_coords(hold.position + Point2( half_width,  half_width)))
-        item = viewer.draw_ellipse(self, corners, **kargs)
+        corners = [hold.surface.pos_to_coords(hold.position - (half_width * Point2(math.cos(theta * math.pi / 16), math.sin(theta * math.pi / 16)))) for theta in range(17)]
+        item = viewer.draw_polygon(self, corners, **kargs)
         self.canvas_items[item] = hold_num
     def draw_hold(self, viewer, hold_num, **kargs):
         hold = self.holds[hold_num]
         if hold.surface.normal.dot(viewer.camera_coords) > 0: # FIXME this check for visibility should be elsewhere
             half_width = hold.width / 2
-            corners = []
-            corners.append(hold.surface.pos_to_coords(hold.position + Point2(-half_width,  half_width)))
-            corners.append(hold.surface.pos_to_coords(hold.position + Point2(-half_width, -half_width)))
-            corners.append(hold.surface.pos_to_coords(hold.position + Point2( half_width, -half_width)))
-            corners.append(hold.surface.pos_to_coords(hold.position + Point2( half_width,  half_width)))
+            corners = [hold.surface.pos_to_coords(hold.position - (half_width * Point2(math.cos(theta * math.pi / 16), math.sin(theta * math.pi / 16)))) for theta in range(17)]
             item = viewer.draw_ellipse(self, corners, **kargs)
             self.canvas_items[item] = hold_num
     def clicked(self, viewer, event, item):
