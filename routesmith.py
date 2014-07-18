@@ -8,7 +8,7 @@ from copy import copy
 from numbers import Real
 from os.path import dirname, expanduser, join as join_path, realpath
 
-from tkinter import Canvas, Tk, mainloop, ARC
+from tkinter import Canvas, Tk, mainloop
 
 # CONSTANTS
 
@@ -217,9 +217,9 @@ class IsometricViewer:
     def update(self):
         self.clear()
         header = [
-                "(theta, phi): ({:.3f}, {:.3f})".format(self.theta, self.phi),
-                "(x, y, z): {}".format(self.camera_coords),
-                ]
+            "(theta, phi): ({:.3f}, {:.3f})".format(self.theta, self.phi),
+            "(x, y, z): {}".format(self.camera_coords),
+        ]
         text = "\n".join(header) + "\n\n" + self.text
         item = self.canvas.create_text((10, 10), anchor="nw", text=text)
         self.items[item] = None
@@ -327,9 +327,9 @@ class Wall(Drawable, Clickable):
     def __init__(self, points, surfaces):
         points = [Point3(*v) for v in points]
         center = Point3(
-                (max(p.x for p in points) + min(p.x for p in points)) / 2,
-                (max(p.y for p in points) + min(p.y for p in points)) / 2,
-                (max(p.z for p in points) + min(p.z for p in points)) / 2)
+            (max(p.x for p in points) + min(p.x for p in points)) / 2,
+            (max(p.y for p in points) + min(p.y for p in points)) / 2,
+            (max(p.z for p in points) + min(p.z for p in points)) / 2)
         self.points = tuple(p - center for p in points)
         self.surfaces = [Surface(self.points[i] for i in surface) for surface in surfaces]
         self.canvas_items = {}
@@ -338,7 +338,7 @@ class Wall(Drawable, Clickable):
         # what we actually want to is take a plane along the two holds, then
         # trace the wall to see if it ever crosses the original line. The plane
         # is defined by the direct vector and the vector perpendicular to its
-        # projection on the x-y plane. That is, at either hold, the 
+        # projection on the x-y plane. That is, at either hold, the
         # plane should intersect the constant z plane such that the resulting
         # line is perpendicular to the vector's projection onto the constant
         # z plane. Some adjustment may be needed for holds along a roof.
@@ -472,8 +472,8 @@ class Problem(Drawable, Clickable):
         hold = self.holds[hold_num]
         corners = []
         for theta in range(17):
-            corners.append(hold.surface.pos_to_coords(hold.position -
-                Point2((hold.width / 2) * math.cos(theta * math.pi / 16), (hold.depth) * math.sin(theta * math.pi / 16)).rotate(hold.angle)))
+            corners.append(hold.surface.pos_to_coords(
+                hold.position - Point2((hold.width / 2) * math.cos(theta * math.pi / 16), (hold.depth) * math.sin(theta * math.pi / 16)).rotate(hold.angle)))
         item = viewer.draw_polygon(self, corners, **kargs)
         self.canvas_items[item] = hold_num
     def draw_hold(self, viewer, hold_num, **kargs):
@@ -481,8 +481,8 @@ class Problem(Drawable, Clickable):
         if hold.surface.normal.dot(viewer.camera_coords) > 0: # FIXME this check for visibility should be elsewhere
             corners = []
             for theta in range(17):
-                corners.append(hold.surface.pos_to_coords(hold.position -
-                    Point2((hold.width / 2) * math.cos(theta * math.pi / 16), (hold.depth) * math.sin(theta * math.pi / 16)).rotate(hold.angle)))
+                corners.append(hold.surface.pos_to_coords(
+                    hold.position - Point2((hold.width / 2) * math.cos(theta * math.pi / 16), (hold.depth) * math.sin(theta * math.pi / 16)).rotate(hold.angle)))
             item = viewer.draw_ellipse(self, corners, **kargs)
             self.canvas_items[item] = hold_num
     def clicked(self, viewer, event, item):
