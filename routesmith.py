@@ -24,15 +24,6 @@ class Point:
     def dimensions(self):
         return len(self.values)
     @property
-    def x(self):
-        return self.values[0]
-    @property
-    def y(self):
-        return self.values[1]
-    @property
-    def z(self):
-        return self.values[2]
-    @property
     def length(self):
         return math.sqrt(sum(i * i for i in self.values))
     def __eq__(self, other):
@@ -44,38 +35,61 @@ class Point:
         return "(" + ", ".join(format(i, ".3f") for i in self.values) + ")"
     def __add__(self, p):
         assert type(self) == type(p) and self.dimensions == p.dimensions
-        return Point(*(i + j for i, j in zip(self.values, p.values)))
+        return self.__class__(*(i + j for i, j in zip(self.values, p.values)))
     def __sub__(self, p):
         assert type(self) == type(p) and self.dimensions == p.dimensions
-        return Point(*(i - j for i, j in zip(self.values, p.values)))
+        return self.__class__(*(i - j for i, j in zip(self.values, p.values)))
     def __neg__(self):
-        return Point(*(-i for i in self.values))
+        return self.__class__(*(-i for i in self.values))
     def __rmul__(self, r):
         assert isinstance(r, Real)
-        return Point(*(r * i for i in self.values))
+        return self.__class__(*(r * i for i in self.values))
     def dot(self, p):
         assert type(self) == type(p) and self.dimensions == p.dimensions
         return sum(i * j for i, j in zip(self.values, p.values))
-    def cross(self, p):
-        assert type(self) == type(p) and self.dimensions == p.dimensions == 3
-        return Point(self.y * p.z - self.z * p.y, self.z * p.x - self.x * p.z, self.x * p.y - self.y * p.x)
     def angle(self, p):
         return math.acos(self.dot(p) / (self.length * p.length))
     def project(self, p):
         assert type(self) == type(p) and self.dimensions == p.dimensions
         return self - (self.dot(p) / p.length) * p
+    def normalize(self):
+        l = self.length
+        return self.__class__(*(i / l for i in self.values))
+
+class Point2(Point):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+    @property
+    def x(self):
+        return self.values[0]
+    @property
+    def y(self):
+        return self.values[1]
+
+class Point3(Point):
+    def __init__(self, x, y, z):
+        super().__init__(x, y, z)
+    @property
+    def x(self):
+        return self.values[0]
+    @property
+    def y(self):
+        return self.values[1]
+    @property
+    def z(self):
+        return self.values[2]
+    def cross(self, p):
+        assert type(self) == type(p)
+        return Point3(self.y * p.z - self.z * p.y, self.z * p.x - self.x * p.z, self.x * p.y - self.y * p.x)
     def rotate(self, theta, phi):
         assert self.dimensions == 3
         sin_theta = math.sin(theta)
         cos_theta = math.cos(theta)
         sin_phi = math.sin(phi)
         cos_phi = math.cos(phi)
-        p = Point(self.x * cos_theta + self.y * -sin_theta, self.x * sin_theta + self.y * cos_theta, self.z)
-        p = Point(p.x * cos_phi + p.z * sin_phi, p.y, p.x * -sin_phi + p.z * cos_phi)
+        p = Point3(self.x * cos_theta + self.y * -sin_theta, self.x * sin_theta + self.y * cos_theta, self.z)
+        p = Point3(p.x * cos_phi + p.z * sin_phi, p.y, p.x * -sin_phi + p.z * cos_phi)
         return p
-    def normalize(self):
-        l = self.length
-        return Point(*(i / l for i in self.values))
 
 class Plane:
     def __init__(self, points):
@@ -123,7 +137,7 @@ class IsometricViewer:
         self.init_gui()
     @property
     def camera_coords(self):
-        return Point(math.cos(self.theta) * math.cos(self.phi), -math.sin(self.theta) * math.cos(self.phi), math.sin(self.phi))
+        return Point3(math.cos(self.theta) * math.cos(self.phi), -math.sin(self.theta) * math.cos(self.phi), math.sin(self.phi))
     def reset_viewport(self):
         self.theta = math.pi / 8
         self.phi = math.pi / 16
@@ -152,7 +166,7 @@ class IsometricViewer:
         self.drawables.append(drawable)
     def project(self, point):
         projected = point.rotate(self.theta, self.phi)
-        return Point(projected.y * self.scale + self.x_offset, -projected.z * self.scale + self.y_offset)
+        return Point2(projected.y * self.scale + self.x_offset, -projected.z * self.scale + self.y_offset)
     def unproject(self, point):
         return point.rotate(0, -self.phi).rotate(-self.theta, 0)
     def move_camera(self, theta, phi):
@@ -167,20 +181,20 @@ class IsometricViewer:
         for item in self.items:
             self.canvas.delete(item)
     def draw_line(self, owner, p1, p2, **kargs):
-        assert isinstance(p1, Point)
-        assert isinstance(p2, Point)
+        assert isinstance(p1, Point3)
+        assert isinstance(p2, Point3)
         p1 = self.project(p1)
         p2 = self.project(p2)
         item = self.canvas.create_line(p1.x, p1.y, p2.x, p2.y, **kargs)
         self.items[item] = owner
         return item
     def draw_ellipse(self, owner, corners, **kargs):
-        assert all(isinstance(p, Point) for p in corners)
+        assert all(isinstance(p, Point3) for p in corners)
         item = self.draw_polygon(owner, corners, outline="#000000", smooth=1, **kargs)
         self.items[item] = owner
         return item
     def draw_polygon(self, owner, pts, **kargs):
-        assert all(isinstance(p, Point) for p in pts)
+        assert all(isinstance(p, Point3) for p in pts)
         args = []
         for p in pts:
             p = self.project(p)
@@ -266,11 +280,11 @@ class Surface:
         self.origin = self.points[0]
         # define the first basis, depending on whether the surface is horizontal
         if abs(self.normal.z) == 1:
-            self.basis_x = Point(0, self.normal.z, -self.normal.x).normalize()
+            self.basis_x = Point3(0, self.normal.z, -self.normal.x).normalize()
             if self.normal.cross(self.basis_x).x < 0:
                 self.basis_x = -self.basis_x
         else:
-            self.basis_x = Point(self.normal.y, -self.normal.x, 0).normalize()
+            self.basis_x = Point3(self.normal.y, -self.normal.x, 0).normalize()
             if self.normal.cross(self.basis_x).z < 0:
                 self.basis_x = -self.basis_x
         self.basis_y = self.normal.cross(self.basis_x)
@@ -291,7 +305,7 @@ class Surface:
     def coords_to_pos(self, point):
         assert self.plane.on_plane(point)
         offset = (point - self.origin)
-        return Point(offset.dot(self.basis_x), offset.dot(self.basis_y))
+        return Point2(offset.dot(self.basis_x), offset.dot(self.basis_y))
     def project(self, vector):
         return vector - (vector - self.points[0]).dot(self.normal) * self.normal
 
@@ -305,8 +319,8 @@ class WallPosition:
 
 class Wall(Drawable, Clickable):
     def __init__(self, points, surfaces):
-        points = [Point(*v) for v in points]
-        center = Point(
+        points = [Point3(*v) for v in points]
+        center = Point3(
                 (max(p.x for p in points) + min(p.x for p in points)) / 2,
                 (max(p.y for p in points) + min(p.y for p in points)) / 2,
                 (max(p.z for p in points) + min(p.z for p in points)) / 2)
@@ -339,7 +353,7 @@ class Wall(Drawable, Clickable):
                 edge_source = surface.coords_to_pos(p1)
                 edge_vector = (surface.coords_to_pos(p2) - edge_source).normalize()
                 # frame the system of equations as a projection
-                solution = Point((edge_source - hold_source).dot(hold_vector), -(edge_source - hold_source).dot(edge_vector))
+                solution = Point3((edge_source - hold_source).dot(hold_vector), -(edge_source - hold_source).dot(edge_vector))
                 # discard if the solution is not, in fact, an intersection
                 if solution.x <= 0 or solution.y < 0 or hold_source + solution.x * hold_vector != edge_source + solution.y * edge_vector:
                     continue
@@ -373,9 +387,9 @@ class Wall(Drawable, Clickable):
         wall_num = self.canvas_items[item]
         surface = self.surfaces[wall_num]
         # undo scaling and translation
-        p1 = Point(0, (event.x - viewer.x_offset) / viewer.scale, -(event.y - viewer.y_offset) / viewer.scale)
+        p1 = Point3(0, (event.x - viewer.x_offset) / viewer.scale, -(event.y - viewer.y_offset) / viewer.scale)
         # create a second point on the beam
-        p2 = p1 + Point(100, 0, 0)
+        p2 = p1 + Point3(100, 0, 0)
         # undo rotation; first phi, then theta
         p1, p2 = viewer.unproject(p1), viewer.unproject(p2)
         # find the vector for the line
@@ -422,9 +436,9 @@ class Problem(Drawable, Clickable):
         self.canvas_items = {}
     def add_hold(self, surface, x, y, width, comment):
         if comment:
-            self.holds.append(Hold(WallPosition(self.wall.surfaces[surface], Point(x, y)), width, comment=comment))
+            self.holds.append(Hold(WallPosition(self.wall.surfaces[surface], Point2(x, y)), width, comment=comment))
         else:
-            self.holds.append(Hold(WallPosition(self.wall.surfaces[surface], Point(x, y)), width))
+            self.holds.append(Hold(WallPosition(self.wall.surfaces[surface], Point2(x, y)), width))
     def add_start_hold(self, index):
         self.start_holds.append(index)
     def add_finish_hold(self, index):
@@ -453,10 +467,10 @@ class Problem(Drawable, Clickable):
         hold = self.holds[hold_num]
         half_width = hold.width / 2
         corners = []
-        corners.append(hold.surface.pos_to_coords(hold.position + Point(-half_width,  half_width)))
-        corners.append(hold.surface.pos_to_coords(hold.position + Point(-half_width, -half_width)))
-        corners.append(hold.surface.pos_to_coords(hold.position + Point( half_width, -half_width)))
-        corners.append(hold.surface.pos_to_coords(hold.position + Point( half_width,  half_width)))
+        corners.append(hold.surface.pos_to_coords(hold.position + Point2(-half_width,  half_width)))
+        corners.append(hold.surface.pos_to_coords(hold.position + Point2(-half_width, -half_width)))
+        corners.append(hold.surface.pos_to_coords(hold.position + Point2( half_width, -half_width)))
+        corners.append(hold.surface.pos_to_coords(hold.position + Point2( half_width,  half_width)))
         item = viewer.draw_ellipse(self, corners, **kargs)
         self.canvas_items[item] = hold_num
     def draw_hold(self, viewer, hold_num, **kargs):
@@ -464,10 +478,10 @@ class Problem(Drawable, Clickable):
         if hold.surface.normal.dot(viewer.camera_coords) > 0: # FIXME this check for visibility should be elsewhere
             half_width = hold.width / 2
             corners = []
-            corners.append(hold.surface.pos_to_coords(hold.position + Point(-half_width,  half_width)))
-            corners.append(hold.surface.pos_to_coords(hold.position + Point(-half_width, -half_width)))
-            corners.append(hold.surface.pos_to_coords(hold.position + Point( half_width, -half_width)))
-            corners.append(hold.surface.pos_to_coords(hold.position + Point( half_width,  half_width)))
+            corners.append(hold.surface.pos_to_coords(hold.position + Point2(-half_width,  half_width)))
+            corners.append(hold.surface.pos_to_coords(hold.position + Point2(-half_width, -half_width)))
+            corners.append(hold.surface.pos_to_coords(hold.position + Point2( half_width, -half_width)))
+            corners.append(hold.surface.pos_to_coords(hold.position + Point2( half_width,  half_width)))
             item = viewer.draw_ellipse(self, corners, **kargs)
             self.canvas_items[item] = hold_num
     def clicked(self, viewer, event, item):
