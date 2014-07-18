@@ -36,16 +36,17 @@ class Point:
     def length(self):
         return math.sqrt(sum(i * i for i in self.values))
     def __eq__(self, other):
+        assert type(self) == type(other)
         return all(x == y for x, y in zip(self.values, other.values))
     def __hash__(self):
         return hash(self.values)
     def __str__(self):
         return "(" + ", ".join(format(i, ".3f") for i in self.values) + ")"
     def __add__(self, p):
-        assert isinstance(p, Point) and self.dimensions == p.dimensions
+        assert type(self) == type(p) and self.dimensions == p.dimensions
         return Point(*(i + j for i, j in zip(self.values, p.values)))
     def __sub__(self, p):
-        assert isinstance(p, Point) and self.dimensions == p.dimensions
+        assert type(self) == type(p) and self.dimensions == p.dimensions
         return Point(*(i - j for i, j in zip(self.values, p.values)))
     def __neg__(self):
         return Point(*(-i for i in self.values))
@@ -53,15 +54,15 @@ class Point:
         assert isinstance(r, Real)
         return Point(*(r * i for i in self.values))
     def dot(self, p):
-        assert isinstance(p, Point) and self.dimensions == p.dimensions
+        assert type(self) == type(p) and self.dimensions == p.dimensions
         return sum(i * j for i, j in zip(self.values, p.values))
     def cross(self, p):
-        assert self.dimensions == 3 and isinstance(p, Point) and p.dimensions == 3
+        assert type(self) == type(p) and self.dimensions == p.dimensions == 3
         return Point(self.y * p.z - self.z * p.y, self.z * p.x - self.x * p.z, self.x * p.y - self.y * p.x)
     def angle(self, p):
         return math.acos(self.dot(p) / (self.length * p.length))
     def project(self, p):
-        assert isinstance(p, Point) and self.dimensions == p.dimensions
+        assert type(self) == type(p) and self.dimensions == p.dimensions
         return self - (self.dot(p) / p.length) * p
     def rotate(self, theta, phi):
         assert self.dimensions == 3
