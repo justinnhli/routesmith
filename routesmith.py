@@ -472,9 +472,8 @@ class Problem(Drawable, Clickable):
         hold = self.holds[hold_num]
         corners = []
         for theta in range(17):
-            corners.append(hold.surface.pos_to_coords(Point2(
-                hold.position.x - ((hold.width / 2) * math.cos(theta * math.pi / 16 + hold.angle)),
-                hold.position.y - ((hold.depth) * math.sin(theta * math.pi / 16 + hold.angle)))))
+            corners.append(hold.surface.pos_to_coords(hold.position -
+                Point2((hold.width / 2) * math.cos(theta * math.pi / 16), (hold.depth) * math.sin(theta * math.pi / 16)).rotate(hold.angle)))
         item = viewer.draw_polygon(self, corners, **kargs)
         self.canvas_items[item] = hold_num
     def draw_hold(self, viewer, hold_num, **kargs):
@@ -482,9 +481,8 @@ class Problem(Drawable, Clickable):
         if hold.surface.normal.dot(viewer.camera_coords) > 0: # FIXME this check for visibility should be elsewhere
             corners = []
             for theta in range(17):
-                corners.append(hold.surface.pos_to_coords(Point2(
-                    hold.position.x - ((hold.width / 2) * math.cos(theta * math.pi / 16 + hold.angle)),
-                    hold.position.y - ((hold.depth) * math.sin(theta * math.pi / 16 + hold.angle)))))
+                corners.append(hold.surface.pos_to_coords(hold.position -
+                    Point2((hold.width / 2) * math.cos(theta * math.pi / 16), (hold.depth) * math.sin(theta * math.pi / 16)).rotate(hold.angle)))
             item = viewer.draw_ellipse(self, corners, **kargs)
             self.canvas_items[item] = hold_num
     def clicked(self, viewer, event, item):
@@ -529,7 +527,7 @@ def create_problem_from_file(path):
             coords = line
             comment = ""
         surface, x, y, width, depth, angle = coords.split()
-        holds.append((int(surface), float(x), float(y), float(width), float(depth), math.radians(-float(angle)), comment))
+        holds.append((int(surface), float(x), float(y), float(width), float(depth), math.radians(float(angle)), comment))
     starts = tuple(int(n) for n in sections[2].strip().split())
     finishes = tuple(int(n) for n in sections[3].strip().split())
     return Problem(wall, holds, starts, finishes)
