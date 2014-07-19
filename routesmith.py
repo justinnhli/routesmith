@@ -272,7 +272,6 @@ class IsometricViewer:
         self.text = "\n".join(text)
         self.update()
     def _callback_button_1_motion(self, event):
-        # TODO drag rotation
         pass
 
 # CLIMBING CLASSES
@@ -299,7 +298,6 @@ class Surface:
         min_y = min((self.points[i] - self.origin).dot(self.basis_y) for i in range(len(self.points)))
         # move the origin to that point
         self.origin += min_x * self.basis_x + min_y * self.basis_y
-        # TODO make sure surface is simple (no line intersections)
     @property
     def normal(self):
         return self.plane.normal
@@ -478,7 +476,7 @@ class Problem(Drawable, Clickable):
         self.canvas_items[item] = hold_num
     def draw_hold(self, viewer, hold_num, **kargs):
         hold = self.holds[hold_num]
-        if hold.surface.normal.dot(viewer.camera_coords) > 0: # FIXME this check for visibility should be elsewhere
+        if hold.surface.normal.dot(viewer.camera_coords) > 0:
             corners = []
             for theta in range(17):
                 corners.append(hold.surface.pos_to_coords(
